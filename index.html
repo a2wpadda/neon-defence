@@ -365,7 +365,7 @@
             <!-- Auth Menu (New) -->
             <div id="auth-modal" class="absolute bg-black/95 backdrop-blur-[25px] p-10 rounded-[32px] border-2 border-[#0ff] text-center pointer-events-auto flex flex-col z-50 shadow-[0_0_100px_rgba(0,255,255,0.15)] w-[90vw] max-w-[400px] gap-4" style="top: 50%; left: 50%; transform: translate(-50%, -50%);">
                 <h1 class="modal-title glow-text mb-2 text-4xl">WELCOME</h1>
-                <p class="text-xs text-gray-400 font-bold uppercase tracking-widest mb-4">Secure Profile Connection</p>
+                <p id="auth-sub-label" class="text-xs text-gray-400 font-bold uppercase tracking-widest mb-4">Secure Profile Connection</p>
                 
                 <div class="flex flex-col gap-2 mb-2">
                     <input type="text" id="auth-username" maxlength="12" placeholder="USERNAME" class="bg-black/50 border-2 border-[#0ff] text-[#0ff] text-center font-black text-xl p-3 rounded uppercase" oninput="this.value = this.value.toUpperCase()">
@@ -539,22 +539,35 @@
 
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
         import { getFirestore, collection, addDoc, getDocs, serverTimestamp, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
-        // Securely hook into the environment's provided database
+        // Check if config exists, otherwise drop down to robust emulated offline mode
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        let app, auth, db;
+        let isOfflineMode = false;
+
+        if (firebaseConfig && firebaseConfig.projectId) {
+            try {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+            } catch (e) {
+                console.warn("Firebase initialization failed. Shifting to offline emulate mode:", e);
+                isOfflineMode = true;
+            }
+        } else {
+            isOfflineMode = true;
+        }
 
         let currentUser = null;
         let isGuest = false;
         let currentUsername = null;
         let currentPassword = null;
 
-        // --- ALL MISSING DOM & STATE VARIABLES RESTORED HERE ---
+        // --- ALL DOM & STATE VARIABLES ---
         const STORAGE_KEY = 'neonDefenceDataV22_Restart';
         let saveData = { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0}, leaderboard: [] };
 
@@ -562,6 +575,7 @@
         const ctx = canvas.getContext('2d');
         
         const authModal = document.getElementById('auth-modal');
+        const authSubLabel = document.getElementById('auth-sub-label');
         const menu = document.getElementById('menu');
         const signOutBtn = document.getElementById('btn-signout');
         const fluxEl = document.getElementById('flux-count');
@@ -609,16 +623,7 @@
         const SHIELD_THICKNESS = 10;
         // --------------------------------------------------------
 
-        const initAuth = async () => {
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
-            } else {
-                await signInAnonymously(auth);
-            }
-        };
-        initAuth();
-
-        onAuthStateChanged(auth, async (user) => {
+        function handleAuthChanged(user) {
             currentUser = user;
             
             // Auto-login if we remember them locally
@@ -633,7 +638,36 @@
                 authModal.classList.remove('hidden');
                 menu.classList.add('hidden');
             }
-        });
+        }
+
+        const initAuth = async () => {
+            if (isOfflineMode) {
+                authSubLabel.innerText = "LOCAL PROFILE (GITHUB EDITION)";
+                authSubLabel.className = "text-xs text-cyan-400 font-bold uppercase tracking-widest mb-4";
+                handleAuthChanged({ uid: 'local-offline-pilot' });
+                return;
+            }
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (e) {
+                console.warn("Unable to start Firebase Auth. Shifting to Offline Mode.", e);
+                isOfflineMode = true;
+                authSubLabel.innerText = "LOCAL PROFILE (OFFLINE MODE)";
+                authSubLabel.className = "text-xs text-yellow-500 font-bold uppercase tracking-widest mb-4";
+                handleAuthChanged({ uid: 'local-offline-pilot' });
+            }
+        };
+
+        if (!isOfflineMode) {
+            initAuth();
+            onAuthStateChanged(auth, handleAuthChanged);
+        } else {
+            initAuth();
+        }
 
         async function handleAuth(action) {
             const usernameInput = document.getElementById('auth-username').value.trim().toUpperCase();
@@ -661,45 +695,111 @@
                 return;
             }
 
-            // AI Profanity Check (Solves the Scunthorpe Problem)
-            if (action === 'go') {
+            // Sanitisation check (avoid restricted words)
+            const badWords = ['FUCK', 'SHIT', 'BITCH', 'CUNT', 'NIGG', 'FAGG', 'DICK', 'PORN', 'CUM', 'SEX', 'TITS', 'WHORE', 'SLUT', 'RAPE', 'NAZI', 'PEDO', 'COCK', 'ANUS', 'PISS'];
+            for (let word of badWords) {
+                if (usernameInput.includes(word)) {
+                    errEl.className = "text-xs text-red-500 font-bold h-4";
+                    errEl.innerText = "USERNAME CONTAINS RESTRICTED WORDS.";
+                    return;
+                }
+            }
+
+            // AI Profanity Check (Solves the Scunthorpe Problem on Canvas)
+            if (action === 'go' && !isOfflineMode) {
                 errEl.className = "text-xs text-yellow-400 font-bold h-4";
                 errEl.innerText = "VERIFYING NETWORK SECURITY...";
                 
                 try {
                     const apiKey = ""; // Canvas injects this automatically
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
-                    const prompt = `You are a moderation AI for an arcade game. Evaluate the username: "${usernameInput}". Does it contain profanity, extreme toxicity, or explicit content? Answer ONLY with "APPROPRIATE" or "INAPPROPRIATE". Beware of the "Scunthorpe problem" (allow innocent names that happen to contain bad substrings like 'ass' in 'Cassandra').`;
-                    const payload = { contents: [{ parts: [{ text: prompt }] }] };
-                    
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    
-                    const result = await response.json();
-                    const aiDecision = result.candidates?.[0]?.content?.parts?.[0]?.text?.trim().toUpperCase() || "";
-                    
-                    if (aiDecision.includes("INAPPROPRIATE")) {
-                        errEl.className = "text-xs text-red-500 font-bold h-4";
-                        errEl.innerText = "USERNAME REJECTED BY NETWORK SECURITY.";
-                        return;
-                    }
-                } catch(e) {
-                    // Fallback to strict basic filter if AI API fails or is offline
-                    const badWords = ['FUCK', 'SHIT', 'BITCH', 'CUNT', 'NIGG', 'FAGG', 'DICK', 'PORN', 'CUM', 'SEX', 'TITS', 'WHORE', 'SLUT', 'RAPE', 'NAZI', 'PEDO', 'COCK', 'ANUS', 'PISS'];
-                    for (let word of badWords) {
-                        if (usernameInput.includes(word)) {
+                    if (apiKey) {
+                        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+                        const prompt = `You are a moderation AI for an arcade game. Evaluate the username: "${usernameInput}". Does it contain profanity, extreme toxicity, or explicit content? Answer ONLY with "APPROPRIATE" or "INAPPROPRIATE". Beware of the "Scunthorpe problem" (allow innocent names that happen to contain bad substrings like 'ass' in 'Cassandra').`;
+                        const payload = { contents: [{ parts: [{ text: prompt }] }] };
+                        
+                        const response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        
+                        const result = await response.json();
+                        const aiDecision = result.candidates?.[0]?.content?.parts?.[0]?.text?.trim().toUpperCase() || "";
+                        
+                        if (aiDecision.includes("INAPPROPRIATE")) {
                             errEl.className = "text-xs text-red-500 font-bold h-4";
-                            errEl.innerText = "USERNAME CONTAINS RESTRICTED WORDS.";
+                            errEl.innerText = "USERNAME REJECTED BY NETWORK SECURITY.";
                             return;
                         }
                     }
+                } catch(e) {
+                    console.log("Local filter used as fallback.");
                 }
             }
 
             try {
+                if (isOfflineMode) {
+                    // --- OFFLINE SIMULATION STORAGE ---
+                    errEl.innerText = "CONNECTING LOCAL ENGINE...";
+                    let localProfiles = JSON.parse(localStorage.getItem('neon_emulated_profiles') || '{}');
+                    
+                    if (localProfiles[usernameInput]) {
+                        // Check password
+                        if (localProfiles[usernameInput].password !== passwordInput) {
+                            throw new Error("INVALID PASSWORD.");
+                        }
+                        
+                        currentUsername = usernameInput;
+                        currentPassword = passwordInput;
+                        
+                        if (rememberMe) {
+                            localStorage.setItem('neonUsername', currentUsername);
+                            localStorage.setItem('neonPassword', currentPassword);
+                        } else {
+                            localStorage.removeItem('neonUsername');
+                            localStorage.removeItem('neonPassword');
+                        }
+                        
+                        saveData = localProfiles[usernameInput].saveData || { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0}, leaderboard: [] };
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
+                        
+                        authModal.classList.add('hidden');
+                        signOutBtn.classList.remove('hidden');
+                        menu.classList.remove('hidden');
+                        updateUI();
+                    } else {
+                        // Register New Local Account
+                        errEl.innerText = "CREATING PROFILE LOCALLY...";
+                        currentUsername = usernameInput;
+                        currentPassword = passwordInput;
+                        
+                        if (rememberMe) {
+                            localStorage.setItem('neonUsername', currentUsername);
+                            localStorage.setItem('neonPassword', currentPassword);
+                        } else {
+                            localStorage.removeItem('neonUsername');
+                            localStorage.removeItem('neonPassword');
+                        }
+                        
+                        saveData = {
+                            currentWave: 1, flux: 0, barricadeTotal: 0, 
+                            upgrades: {width: 1, speed: 1, multi: 1, health: 0},
+                            leaderboard: []
+                        };
+                        
+                        localProfiles[usernameInput] = { password: currentPassword, saveData: saveData };
+                        localStorage.setItem('neon_emulated_profiles', JSON.stringify(localProfiles));
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
+                        
+                        authModal.classList.add('hidden');
+                        signOutBtn.classList.remove('hidden');
+                        menu.classList.remove('hidden');
+                        updateUI();
+                    }
+                    return;
+                }
+
+                // --- ONLINE CLOUD STORAGE ---
                 const saveRef = doc(db, 'artifacts', appId, 'public', 'data', 'saves', usernameInput);
                 
                 if (action === 'go') {
@@ -708,7 +808,6 @@
                     if (docSnap.exists()) {
                         const data = docSnap.data();
                         
-                        // Check password
                         if (data.password !== passwordInput) {
                             throw new Error("INVALID PASSWORD.");
                         }
@@ -724,7 +823,6 @@
                             localStorage.removeItem('neonPassword');
                         }
                         
-                        // Load save data safely
                         saveData = data.saveData || { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0}, leaderboard: [] };
                         if(!saveData.upgrades) saveData.upgrades = {width: 1, speed: 1, multi: 1, health: 0};
                         if(!saveData.leaderboard) saveData.leaderboard = [];
@@ -754,7 +852,6 @@
                             leaderboard: []
                         };
                         
-                        // Save to cloud with password
                         await setDoc(saveRef, { password: currentPassword, saveData: saveData });
                         localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
                         
@@ -784,17 +881,23 @@
         }
 
         async function saveGame() {
-            // Always save locally first so the game feels instantaneous
             localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
             updateUI();
 
-            // Then silently sync to the cloud under the username
-            if (currentUsername && currentPassword) {
-                try {
-                    const saveRef = doc(db, 'artifacts', appId, 'public', 'data', 'saves', currentUsername);
-                    await setDoc(saveRef, { password: currentPassword, saveData: saveData });
-                } catch (e) {
-                    console.error("Cloud sync failed", e);
+            if (currentUsername) {
+                if (isOfflineMode) {
+                    let localProfiles = JSON.parse(localStorage.getItem('neon_emulated_profiles') || '{}');
+                    if (localProfiles[currentUsername]) {
+                        localProfiles[currentUsername].saveData = saveData;
+                        localStorage.setItem('neon_emulated_profiles', JSON.stringify(localProfiles));
+                    }
+                } else if (currentPassword) {
+                    try {
+                        const saveRef = doc(db, 'artifacts', appId, 'public', 'data', 'saves', currentUsername);
+                        await setDoc(saveRef, { password: currentPassword, saveData: saveData });
+                    } catch (e) {
+                        console.error("Cloud sync failed", e);
+                    }
                 }
             }
         }
@@ -962,20 +1065,33 @@
         }
 
         async function submitGlobalScore() {
-            if (!currentUser) {
-                console.error("User not authenticated.");
-                return;
-            }
-            const nameInput = document.getElementById('player-name').value.trim() || '???';
+            const playerName = currentUsername || 'GUEST';
             const statusEl = document.getElementById('submit-status');
             
             statusEl.innerText = "UPLOADING...";
             statusEl.className = "text-xs text-yellow-400 font-bold h-4 mb-4";
             
+            if (isOfflineMode) {
+                setTimeout(() => {
+                    let emulatedLeaderboard = JSON.parse(localStorage.getItem('neon_emulated_leaderboard') || '[]');
+                    emulatedLeaderboard.push({
+                        name: playerName.substring(0, 3).toUpperCase(),
+                        wave: saveData.currentWave,
+                        flux: currentRunFlux,
+                        timestamp: Date.now()
+                    });
+                    localStorage.setItem('neon_emulated_leaderboard', JSON.stringify(emulatedLeaderboard));
+                    statusEl.innerText = "RECORD SYNCED LOCALLY!";
+                    statusEl.className = "text-xs text-green-400 font-bold h-4 mb-4";
+                    document.getElementById('btn-submit-score').disabled = true;
+                }, 400);
+                return;
+            }
+
             try {
                 const leaderboardRef = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
                 await addDoc(leaderboardRef, {
-                    name: nameInput.substring(0, 3).toUpperCase(),
+                    name: playerName.substring(0, 3).toUpperCase(),
                     wave: saveData.currentWave,
                     flux: currentRunFlux,
                     timestamp: serverTimestamp()
@@ -991,33 +1107,30 @@
         }
 
         async function renderLeaderboardUI() {
-            if (!currentUser) {
-                document.getElementById('leaderboard-list').innerHTML = '<div class="text-red-500 italic text-center mt-10 font-bold">Network not ready. Please wait.</div>';
-                return;
-            }
             const list = document.getElementById('leaderboard-list');
-            list.innerHTML = '<div class="text-gray-500 italic text-center mt-10 font-bold animate-pulse">Syncing with Global Network...</div>';
+            list.innerHTML = '<div class="text-gray-500 italic text-center mt-10 font-bold animate-pulse">Syncing with High Scores...</div>';
             
             try {
-                const lbCollection = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
-                // Fetch the raw data and sort on the client side to avoid Firestore index errors
-                const snapshot = await getDocs(lbCollection);
-                
                 let scores = [];
-                snapshot.forEach(doc => {
-                    scores.push(doc.data());
-                });
+
+                if (isOfflineMode) {
+                    scores = JSON.parse(localStorage.getItem('neon_emulated_leaderboard') || '[]');
+                } else {
+                    const lbCollection = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
+                    const snapshot = await getDocs(lbCollection);
+                    snapshot.forEach(doc => {
+                        scores.push(doc.data());
+                    });
+                }
 
                 // Client-side sort: Highest wave first, then highest flux as a tie-breaker
                 scores.sort((a, b) => (b.wave - a.wave) || (b.flux - a.flux));
-                
-                // Limit to top 10
                 scores = scores.slice(0, 10);
                 
                 list.innerHTML = '';
                 
                 if (scores.length === 0) {
-                    list.innerHTML = '<div class="text-gray-500 italic text-center mt-10 font-bold">No global records found. Be the first!</div>';
+                    list.innerHTML = '<div class="text-gray-500 italic text-center mt-10 font-bold">No records found. Be the first!</div>';
                     return;
                 }
 
@@ -1044,7 +1157,7 @@
                 });
             } catch (e) {
                 console.error("Error fetching leaderboard:", e);
-                list.innerHTML = '<div class="text-red-500 italic text-center mt-10 font-bold">Network connection failed.</div>';
+                list.innerHTML = '<div class="text-red-500 italic text-center mt-10 font-bold">Leaderboard connection failed.</div>';
             }
         }
 

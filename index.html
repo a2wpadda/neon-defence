@@ -180,8 +180,18 @@
             flex-direction: column;
             gap: 1.25rem;
         }
-        .shop-scroll::-webkit-scrollbar { width: 6px; }
-        .shop-scroll::-webkit-scrollbar-thumb { background: #0ff; border-radius: 10px; }
+        .shop-scroll::-webkit-scrollbar { width: 8px; }
+        .shop-scroll::-webkit-scrollbar-track { background: rgba(0, 255, 255, 0.05); border-radius: 10px; }
+        .shop-scroll::-webkit-scrollbar-thumb { background: #0ff; border-radius: 10px; box-shadow: inset 0 0 6px rgba(0,0,0,0.3); }
+
+        /* Hidden scrollbar class for horizontal swipe menus */
+        .hide-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none; /* Chrome, Safari and Opera */
+        }
 
         .hidden { display: none !important; }
 
@@ -507,9 +517,17 @@
                 <button class="btn-exit" onclick="toggleModal('leaderboard-modal', false)">×</button>
                 <div class="border-b-2 border-white/10 pb-4 mt-16 text-left">
                     <h1 class="modal-title glow-text">RECORDS</h1>
-                    <p class="text-gray-500 text-sm font-bold uppercase tracking-widest">Global High Scores</p>
+                    <div class="flex gap-2 mt-3 overflow-x-auto pb-1 hide-scrollbar" style="-webkit-overflow-scrolling: touch;">
+                        <button id="tab-wave" class="text-xs font-bold px-3 py-1 rounded bg-[#0ff] text-black border border-[#0ff] flex-shrink-0" onclick="renderLeaderboardUI('wave')">HIGHEST WAVE</button>
+                        <button id="tab-flux" class="text-xs font-bold px-3 py-1 rounded border border-gray-600 text-gray-400 flex-shrink-0" onclick="renderLeaderboardUI('flux')">TOTAL FLUX</button>
+                        <button id="tab-time" class="text-xs font-bold px-3 py-1 rounded border border-gray-600 text-gray-400 flex-shrink-0" onclick="renderLeaderboardUI('time')">PLAYTIME</button>
+                        <button id="tab-boss" class="text-xs font-bold px-3 py-1 rounded border border-gray-600 text-gray-400 flex-shrink-0" onclick="renderLeaderboardUI('boss')">BOSSES SLAIN</button>
+                        <button id="tab-perfect" class="text-xs font-bold px-3 py-1 rounded border border-gray-600 text-gray-400 flex-shrink-0" onclick="renderLeaderboardUI('perfect')">PERFECT WAVE</button>
+                        <button id="tab-barricade" class="text-xs font-bold px-3 py-1 rounded border border-gray-600 text-gray-400 flex-shrink-0" onclick="renderLeaderboardUI('barricade')">WALL OF STEEL</button>
+                        <button id="tab-fastest" class="text-xs font-bold px-3 py-1 rounded border border-gray-600 text-gray-400 flex-shrink-0" onclick="renderLeaderboardUI('fastest')">EFFICIENCY</button>
+                    </div>
                 </div>
-                <div id="leaderboard-list" class="shop-scroll text-left flex flex-col gap-3">
+                <div id="leaderboard-list" class="shop-scroll text-left flex flex-col gap-3 mt-2">
                     <!-- Scores populated by JS -->
                 </div>
             </div>
@@ -580,7 +598,12 @@
 
         // --- ALL DOM & STATE VARIABLES ---
         const STORAGE_KEY = 'neonDefenceDataV22_Restart';
-        let saveData = { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0}, leaderboard: [] };
+        let saveData = { 
+            currentWave: 1, flux: 0, barricadeTotal: 0, 
+            upgrades: {width: 1, speed: 1, multi: 1, health: 0}, 
+            leaderboard: [], lifetimeFlux: 0, playtime: 0,
+            bossesDefeated: 0, maxPerfectWave: 0, barricadesBuilt: 0, fastestWaveTime: 9999
+        };
 
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -629,6 +652,8 @@
         let lastTime = performance.now();
         let spawnTimer = 0;
         let currentBaseScreen = 'menu'; // Tracks where 'X' buttons should route back to
+        let currentWaveTime = 0;
+        let hasTakenDamageThisWave = false;
         
         const SHIELD_RADIUS = 80;
         const BARRICADE_BASE_RADIUS = 130;
@@ -947,6 +972,10 @@
         }
 
         function updateUI() {
+            // Ensure backwards compatibility with old saves
+            saveData.lifetimeFlux = saveData.lifetimeFlux || 0;
+            saveData.playtime = saveData.playtime || 0;
+
             fluxEl.innerText = saveData.flux;
             shopFluxEl.innerText = saveData.flux;
             bShopFluxEl.innerText = saveData.flux;
@@ -1132,27 +1161,55 @@
             updateUI();
         }
 
-        async function submitGlobalScore(waveToSave, fluxToSave) {
+        // Helper to format playtime seconds into Hours and Minutes
+        function formatTime(seconds) {
+            if (!seconds) return "0m";
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            if (h > 0) return `${h}h ${m}m`;
+            return `${m}m`;
+        }
+
+        async function submitGlobalScore() {
             if (!currentUser && !isOfflineMode) {
                 console.error("User not authenticated.");
                 return;
             }
-            // Fetch name from user profile instead of missing input field
             const playerName = currentUsername || 'GUEST';
             const statusEl = document.getElementById('submit-status');
             
             statusEl.innerText = "UPLOADING NEW RECORD...";
             statusEl.className = "text-xs text-yellow-400 font-bold h-4 mb-4 animate-pulse";
             
+            // Extract the true best wave from local records
+            let bestWave = 0;
+            let bestFlux = 0;
+            if (saveData.leaderboard && saveData.leaderboard.length > 0) {
+                bestWave = saveData.leaderboard[0].wave;
+                bestFlux = saveData.leaderboard[0].flux;
+            }
+            
             if (isOfflineMode) {
                 setTimeout(() => {
                     let emulatedLeaderboard = JSON.parse(localStorage.getItem('neon_emulated_leaderboard') || '[]');
-                    emulatedLeaderboard.push({
+                    const existingIndex = emulatedLeaderboard.findIndex(entry => entry.name === playerName.toUpperCase());
+                    
+                    const newData = {
                         name: playerName.toUpperCase(),
-                        wave: waveToSave,
-                        flux: fluxToSave,
+                        wave: bestWave,
+                        flux: bestFlux,
+                        lifetimeFlux: saveData.lifetimeFlux || 0,
+                        playtime: saveData.playtime || 0,
+                        bossesDefeated: saveData.bossesDefeated || 0,
+                        maxPerfectWave: saveData.maxPerfectWave || 0,
+                        barricadesBuilt: saveData.barricadesBuilt || 0,
+                        fastestWaveTime: saveData.fastestWaveTime || 9999,
                         timestamp: Date.now()
-                    });
+                    };
+                    
+                    if (existingIndex !== -1) emulatedLeaderboard[existingIndex] = newData;
+                    else emulatedLeaderboard.push(newData);
+                    
                     localStorage.setItem('neon_emulated_leaderboard', JSON.stringify(emulatedLeaderboard));
                     statusEl.innerText = "RECORD SYNCED LOCALLY!";
                     statusEl.className = "text-xs text-green-400 font-bold h-4 mb-4";
@@ -1161,14 +1218,21 @@
             }
 
             try {
-                const leaderboardRef = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
-                await addDoc(leaderboardRef, {
+                const leaderboardRef = doc(db, 'artifacts', appId, 'public', 'data', 'leaderboard', playerName.toUpperCase());
+                await setDoc(leaderboardRef, {
                     name: playerName.toUpperCase(),
-                    wave: waveToSave,
-                    flux: fluxToSave,
+                    wave: bestWave,
+                    flux: bestFlux,
+                    lifetimeFlux: saveData.lifetimeFlux || 0,
+                    playtime: saveData.playtime || 0,
+                    bossesDefeated: saveData.bossesDefeated || 0,
+                    maxPerfectWave: saveData.maxPerfectWave || 0,
+                    barricadesBuilt: saveData.barricadesBuilt || 0,
+                    fastestWaveTime: saveData.fastestWaveTime || 9999,
                     timestamp: serverTimestamp()
-                });
-                statusEl.innerText = "NEW PERSONAL BEST SAVED TO NETWORK!";
+                }, { merge: true });
+                
+                statusEl.innerText = "STATS SYNCED TO NETWORK!";
                 statusEl.className = "text-xs text-green-400 font-bold h-4 mb-4";
             } catch (e) {
                 console.error("Error submitting score:", e);
@@ -1177,7 +1241,22 @@
             }
         }
 
-        async function renderLeaderboardUI() {
+        let currentLeaderboardTab = 'wave';
+
+        async function renderLeaderboardUI(tab = currentLeaderboardTab) {
+            currentLeaderboardTab = tab;
+            
+            // Update Tab UI Styles
+            ['wave', 'flux', 'time', 'boss', 'perfect', 'barricade', 'fastest'].forEach(t => {
+                const el = document.getElementById(`tab-${t}`);
+                if (!el) return;
+                if (t === tab) {
+                    el.className = "text-xs font-bold px-3 py-1 rounded bg-[#0ff] text-black border border-[#0ff] flex-shrink-0";
+                } else {
+                    el.className = "text-xs font-bold px-3 py-1 rounded border border-gray-600 text-gray-400 flex-shrink-0";
+                }
+            });
+
             if (!currentUser && !isOfflineMode) {
                 document.getElementById('leaderboard-list').innerHTML = '<div class="text-red-500 italic text-center mt-10 font-bold">Network not ready. Please wait.</div>';
                 return;
@@ -1198,9 +1277,28 @@
                     });
                 }
 
-                // Client-side sort: Highest wave first, then highest flux as a tie-breaker
-                scores.sort((a, b) => (b.wave - a.wave) || (b.flux - a.flux));
-                scores = scores.slice(0, 10);
+                // Client-side sort based on selected tab
+                if (tab === 'wave') {
+                    scores.sort((a, b) => (b.wave - a.wave) || (b.flux - a.flux));
+                } else if (tab === 'flux') {
+                    scores.sort((a, b) => (b.lifetimeFlux || 0) - (a.lifetimeFlux || 0));
+                } else if (tab === 'time') {
+                    scores.sort((a, b) => (b.playtime || 0) - (a.playtime || 0));
+                } else if (tab === 'boss') {
+                    scores.sort((a, b) => (b.bossesDefeated || 0) - (a.bossesDefeated || 0));
+                } else if (tab === 'perfect') {
+                    scores.sort((a, b) => (b.maxPerfectWave || 0) - (a.maxPerfectWave || 0));
+                } else if (tab === 'barricade') {
+                    scores.sort((a, b) => (b.barricadesBuilt || 0) - (a.barricadesBuilt || 0));
+                } else if (tab === 'fastest') {
+                    scores.sort((a, b) => {
+                        let timeA = a.fastestWaveTime || 9999;
+                        let timeB = b.fastestWaveTime || 9999;
+                        return timeA - timeB;
+                    });
+                }
+                
+                scores = scores.slice(0, 100); // Support top 100
                 
                 list.innerHTML = '';
                 
@@ -1218,15 +1316,42 @@
                     else if (index === 1) rankColor = 'text-gray-300';
                     else if (index === 2) rankColor = 'text-amber-600';
 
+                    let subtitle = '';
+                    let rightSideText = '';
+                    
+                    if (tab === 'wave') {
+                        subtitle = `WAVE ${run.wave || 0}`;
+                        rightSideText = `${run.flux || 0} F`;
+                    } else if (tab === 'flux') {
+                        subtitle = `LIFETIME EARNINGS`;
+                        rightSideText = `${run.lifetimeFlux || 0} F`;
+                    } else if (tab === 'time') {
+                        subtitle = `TIME IN COMBAT`;
+                        rightSideText = formatTime(run.playtime || 0);
+                    } else if (tab === 'boss') {
+                        subtitle = `BOSSES EXECUTED`;
+                        rightSideText = run.bossesDefeated || 0;
+                    } else if (tab === 'perfect') {
+                        subtitle = `UNBREACHED RUN`;
+                        rightSideText = `WAVE ${run.maxPerfectWave || 0}`;
+                    } else if (tab === 'barricade') {
+                        subtitle = `UNITS BUILT`;
+                        rightSideText = run.barricadesBuilt || 0;
+                    } else if (tab === 'fastest') {
+                        subtitle = `RECORD CLEAR TIME`;
+                        let t = run.fastestWaveTime || 9999;
+                        rightSideText = t === 9999 ? "N/A" : `${t.toFixed(2)}s`;
+                    }
+
                     row.innerHTML = `
                         <div class="flex items-center gap-5">
                             <div class="font-black text-3xl w-8 text-center ${rankColor}">#${index + 1}</div>
                             <div>
                                 <div class="font-black text-2xl text-white truncate max-w-[130px] sm:max-w-[200px]">${run.name || '???'}</div>
-                                <div class="text-xs text-gray-400 font-bold tracking-widest">WAVE ${run.wave || 0}</div>
+                                <div class="text-xs text-gray-400 font-bold tracking-widest">${subtitle}</div>
                             </div>
                         </div>
-                        <div class="font-black text-yellow-400 text-xl">${run.flux || 0} F</div>
+                        <div class="font-black text-yellow-400 text-xl">${rightSideText}</div>
                     `;
                     list.appendChild(row);
                 });
@@ -1260,6 +1385,7 @@
             if (saveData.barricadeTotal < 10 && saveData.flux >= cost) {
                 saveData.flux -= cost;
                 saveData.barricadeTotal++;
+                saveData.barricadesBuilt = (saveData.barricadesBuilt || 0) + 1;
                 saveGame();
             }
         }
@@ -1307,6 +1433,8 @@
             enemies = [];
             particles = [];
             floatingTexts = [];
+            currentWaveTime = 0;
+            hasTakenDamageThisWave = false;
             
             isBossWave = (saveData.currentWave % 10 === 0);
             bosses = [];
@@ -1352,6 +1480,15 @@
             gameActive = false;
             pauseBtn.classList.add('hidden');
             saveData.flux += currentRunFlux;
+            
+            // Evaluate Trackers for new Leaderboards
+            if (!hasTakenDamageThisWave) {
+                saveData.maxPerfectWave = Math.max(saveData.maxPerfectWave || 0, saveData.currentWave);
+            }
+            if (!isBossWave && currentWaveTime > 0) {
+                saveData.fastestWaveTime = Math.min(saveData.fastestWaveTime || 9999, currentWaveTime);
+            }
+            
             currentHealth = Math.min(currentHealth + 1, maxHealth);
             saveData.currentWave++;
             saveGame();
@@ -1365,6 +1502,7 @@
 
         function endGame() {
             gameActive = false;
+            isPaused = false;
             pauseBtn.classList.add('hidden');
             enemies.length = 0;
             bosses.length = 0;
@@ -1374,14 +1512,6 @@
             
             const runWave = saveData.currentWave;
             const runFlux = currentRunFlux;
-
-            let bestWave = 0;
-            let bestFlux = 0;
-            if (saveData.leaderboard && saveData.leaderboard.length > 0) {
-                bestWave = saveData.leaderboard[0].wave;
-                bestFlux = saveData.leaderboard[0].flux;
-            }
-            let isImprovement = (runWave > bestWave) || (runWave === bestWave && runFlux > bestFlux);
             
             // --- Save to Leaderboard ---
             saveData.leaderboard.push({
@@ -1398,13 +1528,8 @@
             document.getElementById('restart-wave-num').innerText = saveData.currentWave;
             barricadeIndicator.classList.add('hidden');
             
-            const statusEl = document.getElementById('submit-status');
-            if (isImprovement) {
-                submitGlobalScore(runWave, runFlux);
-            } else {
-                statusEl.innerText = "RUN COMPLETED. LOCAL DATA SAVED.";
-                statusEl.className = "text-xs text-gray-500 font-bold h-4 mb-4";
-            }
+            // ALWAYS upload so playtime and lifetime flux stay synced
+            submitGlobalScore();
             
             toggleModal('game-over', true);
             shakeAmount = 40;
@@ -1552,8 +1677,10 @@
                         shakeAmount = 15;
                         
                         if (this.hp <= 0) {
+                            saveData.bossesDefeated = (saveData.bossesDefeated || 0) + 1;
                             const reward = 100 + (this.tier * 50);
                             currentRunFlux += reward; 
+                            saveData.lifetimeFlux += reward;
                             scoreEl.innerText = currentRunFlux;
                             floatingTexts.push(new FloatingText(this.x, this.y, `+${reward} F`, '#fbbf24'));
                             createExplosion(this.x, this.y, this.color, 100);
@@ -1567,6 +1694,7 @@
                 if (dist < 25) {
                     currentHealth -= 2; 
                     shakeAmount = 30;
+                    hasTakenDamageThisWave = true;
                     floatingTexts.push(new FloatingText(centerX, centerY - 40, "-2", "#ff0055"));
                     createExplosion(this.x, this.y, '#f0f', 40);
                     renderHealth();
@@ -1736,6 +1864,7 @@
                                 } else {
                                     const points = this.type === 'stinger' ? 2 : (this.type === 'bouncer' ? 3 : 1);
                                     currentRunFlux += points;
+                                    saveData.lifetimeFlux += points;
                                     scoreEl.innerText = currentRunFlux;
                                     floatingTexts.push(new FloatingText(this.x, this.y, `+${points} F`, '#fbbf24'));
                                     createExplosion(this.x, this.y, this.color, 15);
@@ -1755,6 +1884,7 @@
                 if (dist < 20) {
                     currentHealth--;
                     shakeAmount = 25;
+                    hasTakenDamageThisWave = true;
                     floatingTexts.push(new FloatingText(centerX, centerY - 30, "-1", "#ff0055"));
                     createExplosion(this.x, this.y, '#ff0055', 20);
                     renderHealth();
@@ -1894,6 +2024,10 @@
                 shakeAmount *= 0.9;
             }
             if (gameActive && !isPaused) {
+                // Track Playtime and current wave efficiency (Convert ms to seconds)
+                saveData.playtime = (saveData.playtime || 0) + (dt / 1000);
+                currentWaveTime += (dt / 1000);
+                
                 const baseRotate = 0.04;
                 const speedMult = 1 + (saveData.upgrades.speed - 1) * 0.25;
                 rotation += baseRotate * speedMult * rotationDir * (1 + (difficulty-1)*0.15);
@@ -1941,9 +2075,11 @@
         window.toggleModal = (id, show) => toggleModal(id, show);
         window.buyUpgrade = (type) => buyUpgrade(type);
         window.buyBarricade = () => buyBarricade();
-        window.submitGlobalScore = (w, f) => submitGlobalScore(w, f);
+        window.submitGlobalScore = () => submitGlobalScore();
         window.handleAuth = (a) => handleAuth(a);
         window.handleSignOut = () => handleSignOut();
+        window.renderLeaderboardUI = (t) => renderLeaderboardUI(t);
+        window.endGame = () => endGame();
         
         requestAnimationFrame(loop);
     </script>

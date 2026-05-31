@@ -150,7 +150,7 @@
             transform: translate(-50%, -50%);
         }
 
-        #shop, #barricade-shop {
+        #shop, #barricade-shop, #leaderboard-modal {
             position: absolute;
             background: rgba(0, 0, 0, 0.96);
             backdrop-filter: blur(25px);
@@ -161,7 +161,7 @@
             pointer-events: auto;
             display: flex;
             flex-direction: column;
-            z-index: 20;
+            z-index: 30;
             box-shadow: 0 0 100px rgba(0, 255, 255, 0.15);
             width: 95vw;
             height: 90vh;
@@ -272,6 +272,10 @@
             transition: all 0.2s;
             line-height: 1;
             user-select: none;
+            background: none;
+            border: none;
+            padding: 0;
+            outline: none;
         }
         .btn-exit:hover {
             transform: scale(1.15);
@@ -409,13 +413,13 @@
                 <p class="text-[#0ff] text-xs font-bold mb-8 uppercase tracking-widest animate-pulse">SYSTEM STANDBY</p>
                 <div class="flex flex-col gap-4">
                     <button class="btn" onclick="togglePause()">RESUME</button>
-                    <button class="btn btn-secondary text-sm !text-red-500 !border-red-500" onclick="quitToMenu()">ABORT MISSION</button>
+                    <button class="btn btn-secondary text-sm !text-red-500 !border-red-500" onclick="endGame()">ABORT MISSION</button>
                 </div>
             </div>
 
             <!-- Upgrades Menu -->
             <div id="shop" class="hidden">
-                <div class="btn-exit" onclick="toggleModal('shop', false)">×</div>
+                <button class="btn-exit" onclick="toggleModal('shop', false)">×</button>
                 <div class="flex justify-between items-end mb-4 border-b-2 border-white/10 pb-4 mt-20">
                     <div>
                         <h1 class="modal-title glow-text">UPGRADES</h1>
@@ -472,7 +476,7 @@
 
             <!-- Shop Menu -->
             <div id="barricade-shop" class="hidden">
-                <div class="btn-exit" onclick="toggleModal('barricade-shop', false)">×</div>
+                <button class="btn-exit" onclick="toggleModal('barricade-shop', false)">×</button>
                 <div class="flex justify-between items-end mb-4 border-b-2 border-white/10 pb-4 mt-20">
                     <div>
                         <h1 class="modal-title glow-text">SHOP</h1>
@@ -500,7 +504,7 @@
 
             <!-- Leaderboard Menu -->
             <div id="leaderboard-modal" class="hidden">
-                <div class="btn-exit" onclick="toggleModal('leaderboard-modal', false)">×</div>
+                <button class="btn-exit" onclick="toggleModal('leaderboard-modal', false)">×</button>
                 <div class="border-b-2 border-white/10 pb-4 mt-16 text-left">
                     <h1 class="modal-title glow-text">RECORDS</h1>
                     <p class="text-gray-500 text-sm font-bold uppercase tracking-widest">Global High Scores</p>
@@ -519,19 +523,18 @@
                     <div class="text-xs text-gray-500 font-bold">Retrying Wave <span id="restart-wave-num">1</span></div>
                 </div>
                 
-                <!-- Leaderboard Submit UI -->
-                <div class="mb-2 flex gap-2 justify-center">
-                    <button id="btn-submit-score" class="btn btn-secondary w-full max-w-[250px]" onclick="submitGlobalScore()">UPLOAD TO NETWORK</button>
-                </div>
-                <div id="submit-status" class="text-xs text-green-400 font-bold h-4 mb-4"></div>
+                <!-- Auto-Upload Status -->
+                <div id="submit-status" class="text-xs font-bold h-4 mb-4"></div>
 
                 <div class="flex flex-col gap-3">
                     <button class="btn" onclick="startGame(true)">RETRY</button>
                     <button class="btn btn-secondary text-sm" onclick="toggleModal('shop', true)">UPGRADES</button>
+                    <button class="btn btn-secondary text-sm" onclick="toggleModal('leaderboard-modal', true)">LEADERBOARD</button>
                     <div class="flex flex-col gap-2">
                         <button class="btn btn-secondary text-sm" id="btn-open-shop-breached" onclick="toggleModal('barricade-shop', true)">SHOP</button>
                         <div id="unlock-instruction-breached" class="unlock-hint">Upgrade Health to unlock</div>
                     </div>
+                    <button class="btn btn-secondary text-sm !border-gray-500 !text-gray-400" onclick="toggleModal('menu', true)">HOME</button>
                 </div>
             </div>
         </div>
@@ -542,9 +545,17 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
         import { getFirestore, collection, addDoc, getDocs, serverTimestamp, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
-        // Check if config exists, otherwise drop down to robust emulated offline mode
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        // Fix for JSON.parse error if config is empty which crashes the script and breaks window buttons
+        let firebaseConfig = {};
+        try {
+            if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                firebaseConfig = JSON.parse(__firebase_config);
+            }
+        } catch(e) {
+            console.warn("Invalid Firebase config. Falling back securely.", e);
+        }
+        
+        const appId = (typeof __app_id !== 'undefined' && __app_id) ? __app_id : 'default-app-id';
 
         let app, auth, db;
         let isOfflineMode = false;
@@ -617,7 +628,8 @@
         let shakeAmount = 0;
         let lastTime = performance.now();
         let spawnTimer = 0;
-
+        let currentBaseScreen = 'menu'; // Tracks where 'X' buttons should route back to
+        
         const SHIELD_RADIUS = 80;
         const BARRICADE_BASE_RADIUS = 130;
         const SHIELD_THICKNESS = 10;
@@ -683,7 +695,7 @@
                 currentUsername = null;
                 currentPassword = null;
                 authModal.classList.add('hidden');
-                signOutBtn.classList.add('hidden');
+                signOutBtn.classList.remove('hidden');
                 menu.classList.remove('hidden');
                 updateUI();
                 return;
@@ -763,10 +775,15 @@
                         saveData = localProfiles[usernameInput].saveData || { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0}, leaderboard: [] };
                         localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
                         
-                        authModal.classList.add('hidden');
-                        signOutBtn.classList.remove('hidden');
-                        menu.classList.remove('hidden');
-                        updateUI();
+                        errEl.className = "text-xs text-green-400 font-bold h-4";
+                        errEl.innerText = `WELCOME BACK, ${currentUsername}!`;
+                        
+                        setTimeout(() => {
+                            authModal.classList.add('hidden');
+                            signOutBtn.classList.remove('hidden');
+                            menu.classList.remove('hidden');
+                            updateUI();
+                        }, 700);
                     } else {
                         // Register New Local Account
                         errEl.innerText = "CREATING PROFILE LOCALLY...";
@@ -791,10 +808,15 @@
                         localStorage.setItem('neon_emulated_profiles', JSON.stringify(localProfiles));
                         localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
                         
-                        authModal.classList.add('hidden');
-                        signOutBtn.classList.remove('hidden');
-                        menu.classList.remove('hidden');
-                        updateUI();
+                        errEl.className = "text-xs text-cyan-400 font-bold h-4";
+                        errEl.innerText = `NEW PROFILE CREATED!`;
+                        
+                        setTimeout(() => {
+                            authModal.classList.add('hidden');
+                            signOutBtn.classList.remove('hidden');
+                            menu.classList.remove('hidden');
+                            updateUI();
+                        }, 700);
                     }
                     return;
                 }
@@ -829,10 +851,15 @@
                         
                         localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
                         
-                        authModal.classList.add('hidden');
-                        signOutBtn.classList.remove('hidden');
-                        menu.classList.remove('hidden');
-                        updateUI();
+                        errEl.className = "text-xs text-green-400 font-bold h-4";
+                        errEl.innerText = `WELCOME BACK, ${currentUsername}!`;
+                        
+                        setTimeout(() => {
+                            authModal.classList.add('hidden');
+                            signOutBtn.classList.remove('hidden');
+                            menu.classList.remove('hidden');
+                            updateUI();
+                        }, 700);
                     } else {
                         errEl.innerText = "CREATING SECURE PROFILE...";
                         currentUsername = usernameInput;
@@ -855,10 +882,15 @@
                         await setDoc(saveRef, { password: currentPassword, saveData: saveData });
                         localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
                         
-                        authModal.classList.add('hidden');
-                        signOutBtn.classList.remove('hidden');
-                        menu.classList.remove('hidden');
-                        updateUI();
+                        errEl.className = "text-xs text-cyan-400 font-bold h-4";
+                        errEl.innerText = `NEW SECURE PROFILE CREATED!`;
+                        
+                        setTimeout(() => {
+                            authModal.classList.add('hidden');
+                            signOutBtn.classList.remove('hidden');
+                            menu.classList.remove('hidden');
+                            updateUI();
+                        }, 700);
                     }
                 }
             } catch (e) {
@@ -874,10 +906,22 @@
             isGuest = false;
             localStorage.removeItem('neonUsername');
             localStorage.removeItem('neonPassword');
+            
+            // Restart waves and total flux upon disconnect
+            saveData = { 
+                currentWave: 1, 
+                flux: 0, 
+                barricadeTotal: 0, 
+                upgrades: {width: 1, speed: 1, multi: 1, health: 0}, 
+                leaderboard: [] 
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
+            
             menu.classList.add('hidden');
             authModal.classList.remove('hidden');
             document.getElementById('auth-username').value = '';
             document.getElementById('auth-password').value = '';
+            updateUI();
         }
 
         async function saveGame() {
@@ -909,8 +953,19 @@
             ownedBarricadesBadge.innerText = `${saveData.barricadeTotal} / 10`;
             document.getElementById('start-wave-num').innerText = saveData.currentWave;
             
+            if (isGuest) {
+                signOutBtn.innerText = "CONNECT PROFILE";
+                signOutBtn.classList.remove('text-red-500');
+                signOutBtn.classList.add('text-cyan-400');
+            } else {
+                signOutBtn.innerText = "DISCONNECT PROFILE";
+                signOutBtn.classList.remove('text-cyan-400');
+                signOutBtn.classList.add('text-red-500');
+            }
+
             if (saveData.barricadeTotal > 0) {
                 barricadeIndicator.classList.remove('hidden');
+                activeBarricadeCountEl.innerText = barricadeUnits.filter(b => b.active).length;
             } else {
                 barricadeIndicator.classList.add('hidden');
             }
@@ -1055,35 +1110,52 @@
             pauseMenu.classList.add('hidden');
             leaderboardModal.classList.add('hidden');
             
-            if (id === 'pause-menu') pauseMenu.classList.remove('hidden');
-            else if (show && id) {
+            if (id === 'pause-menu') {
+                pauseMenu.classList.remove('hidden');
+            } else if (id === 'menu') {
+                currentBaseScreen = 'menu';
+                menu.classList.remove('hidden');
+            } else if (id === 'game-over') {
+                currentBaseScreen = 'game-over';
+                gameOverScreen.classList.remove('hidden');
+            } else if (show && id) {
                 document.getElementById(id).classList.remove('hidden');
                 if (id === 'leaderboard-modal') renderLeaderboardUI();
+            } else if (id !== 'none') {
+                // Return to the active base screen correctly based on where they came from
+                if (currentBaseScreen === 'game-over') {
+                    gameOverScreen.classList.remove('hidden');
+                } else {
+                    menu.classList.remove('hidden');
+                }
             }
-            else if (id !== 'none') menu.classList.remove('hidden');
             updateUI();
         }
 
-        async function submitGlobalScore() {
+        async function submitGlobalScore(waveToSave, fluxToSave) {
+            if (!currentUser && !isOfflineMode) {
+                console.error("User not authenticated.");
+                return;
+            }
+            // Fetch name from user profile instead of missing input field
             const playerName = currentUsername || 'GUEST';
             const statusEl = document.getElementById('submit-status');
             
-            statusEl.innerText = "UPLOADING...";
-            statusEl.className = "text-xs text-yellow-400 font-bold h-4 mb-4";
+            statusEl.innerText = "UPLOADING NEW RECORD...";
+            statusEl.className = "text-xs text-yellow-400 font-bold h-4 mb-4 animate-pulse";
             
             if (isOfflineMode) {
                 setTimeout(() => {
                     let emulatedLeaderboard = JSON.parse(localStorage.getItem('neon_emulated_leaderboard') || '[]');
                     emulatedLeaderboard.push({
-                        name: playerName.substring(0, 3).toUpperCase(),
-                        wave: saveData.currentWave,
-                        flux: currentRunFlux,
+                        name: playerName.toUpperCase(),
+                        wave: waveToSave,
+                        flux: fluxToSave,
                         timestamp: Date.now()
                     });
                     localStorage.setItem('neon_emulated_leaderboard', JSON.stringify(emulatedLeaderboard));
                     statusEl.innerText = "RECORD SYNCED LOCALLY!";
                     statusEl.className = "text-xs text-green-400 font-bold h-4 mb-4";
-                    document.getElementById('btn-submit-score').disabled = true;
                 }, 400);
                 return;
             }
@@ -1091,22 +1163,25 @@
             try {
                 const leaderboardRef = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
                 await addDoc(leaderboardRef, {
-                    name: playerName.substring(0, 3).toUpperCase(),
-                    wave: saveData.currentWave,
-                    flux: currentRunFlux,
+                    name: playerName.toUpperCase(),
+                    wave: waveToSave,
+                    flux: fluxToSave,
                     timestamp: serverTimestamp()
                 });
-                statusEl.innerText = "RECORD SAVED TO NETWORK!";
+                statusEl.innerText = "NEW PERSONAL BEST SAVED TO NETWORK!";
                 statusEl.className = "text-xs text-green-400 font-bold h-4 mb-4";
-                document.getElementById('btn-submit-score').disabled = true;
             } catch (e) {
                 console.error("Error submitting score:", e);
-                statusEl.innerText = "CONNECTION FAILED";
+                statusEl.innerText = "NETWORK SYNC FAILED";
                 statusEl.className = "text-xs text-red-500 font-bold h-4 mb-4";
             }
         }
 
         async function renderLeaderboardUI() {
+            if (!currentUser && !isOfflineMode) {
+                document.getElementById('leaderboard-list').innerHTML = '<div class="text-red-500 italic text-center mt-10 font-bold">Network not ready. Please wait.</div>';
+                return;
+            }
             const list = document.getElementById('leaderboard-list');
             list.innerHTML = '<div class="text-gray-500 italic text-center mt-10 font-bold animate-pulse">Syncing with High Scores...</div>';
             
@@ -1147,7 +1222,7 @@
                         <div class="flex items-center gap-5">
                             <div class="font-black text-3xl w-8 text-center ${rankColor}">#${index + 1}</div>
                             <div>
-                                <div class="font-black text-2xl text-white">${run.name || '???'}</div>
+                                <div class="font-black text-2xl text-white truncate max-w-[130px] sm:max-w-[200px]">${run.name || '???'}</div>
                                 <div class="text-xs text-gray-400 font-bold tracking-widest">WAVE ${run.wave || 0}</div>
                             </div>
                         </div>
@@ -1297,10 +1372,21 @@
             floatingTexts.length = 0;
             saveData.flux += currentRunFlux;
             
+            const runWave = saveData.currentWave;
+            const runFlux = currentRunFlux;
+
+            let bestWave = 0;
+            let bestFlux = 0;
+            if (saveData.leaderboard && saveData.leaderboard.length > 0) {
+                bestWave = saveData.leaderboard[0].wave;
+                bestFlux = saveData.leaderboard[0].flux;
+            }
+            let isImprovement = (runWave > bestWave) || (runWave === bestWave && runFlux > bestFlux);
+            
             // --- Save to Leaderboard ---
             saveData.leaderboard.push({
-                wave: saveData.currentWave,
-                flux: currentRunFlux,
+                wave: runWave,
+                flux: runFlux,
                 date: new Date().toLocaleDateString()
             });
             saveData.leaderboard.sort((a, b) => b.wave - a.wave || b.flux - a.flux);
@@ -1308,13 +1394,17 @@
             
             saveData.currentWave = Math.max(1, saveData.currentWave - 1);
             saveGame();
-            finalScoreEl.innerText = currentRunFlux;
+            finalScoreEl.innerText = runFlux;
             document.getElementById('restart-wave-num').innerText = saveData.currentWave;
             barricadeIndicator.classList.add('hidden');
             
-            // Reset Submission UI
-            document.getElementById('btn-submit-score').disabled = false;
-            document.getElementById('submit-status').innerText = "";
+            const statusEl = document.getElementById('submit-status');
+            if (isImprovement) {
+                submitGlobalScore(runWave, runFlux);
+            } else {
+                statusEl.innerText = "RUN COMPLETED. LOCAL DATA SAVED.";
+                statusEl.className = "text-xs text-gray-500 font-bold h-4 mb-4";
+            }
             
             toggleModal('game-over', true);
             shakeAmount = 40;
@@ -1845,15 +1935,15 @@
         }
         
         // Expose functions to the window so HTML buttons can trigger them
-        window.togglePause = togglePause;
-        window.quitToMenu = quitToMenu;
-        window.startGame = startGame;
-        window.toggleModal = toggleModal;
-        window.buyUpgrade = buyUpgrade;
-        window.buyBarricade = buyBarricade;
-        window.submitGlobalScore = submitGlobalScore;
-        window.handleAuth = handleAuth;
-        window.handleSignOut = handleSignOut;
+        window.togglePause = () => togglePause();
+        window.quitToMenu = () => quitToMenu();
+        window.startGame = (heal) => startGame(heal);
+        window.toggleModal = (id, show) => toggleModal(id, show);
+        window.buyUpgrade = (type) => buyUpgrade(type);
+        window.buyBarricade = () => buyBarricade();
+        window.submitGlobalScore = (w, f) => submitGlobalScore(w, f);
+        window.handleAuth = (a) => handleAuth(a);
+        window.handleSignOut = () => handleSignOut();
         
         requestAnimationFrame(loop);
     </script>

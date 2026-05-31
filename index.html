@@ -1184,9 +1184,13 @@
             // Extract the true best wave from local records
             let bestWave = 0;
             let bestFlux = 0;
+            let bestEnemiesKilled = 0;
+            let bestTotalEnemies = 0;
             if (saveData.leaderboard && saveData.leaderboard.length > 0) {
                 bestWave = saveData.leaderboard[0].wave;
                 bestFlux = saveData.leaderboard[0].flux;
+                bestEnemiesKilled = saveData.leaderboard[0].enemiesKilled || 0;
+                bestTotalEnemies = saveData.leaderboard[0].totalEnemies || 0;
             }
             
             if (isOfflineMode) {
@@ -1198,6 +1202,8 @@
                         name: playerName.toUpperCase(),
                         wave: bestWave,
                         flux: bestFlux,
+                        enemiesKilled: bestEnemiesKilled,
+                        totalEnemies: bestTotalEnemies,
                         lifetimeFlux: saveData.lifetimeFlux || 0,
                         playtime: saveData.playtime || 0,
                         bossesDefeated: saveData.bossesDefeated || 0,
@@ -1223,6 +1229,8 @@
                     name: playerName.toUpperCase(),
                     wave: bestWave,
                     flux: bestFlux,
+                    enemiesKilled: bestEnemiesKilled,
+                    totalEnemies: bestTotalEnemies,
                     lifetimeFlux: saveData.lifetimeFlux || 0,
                     playtime: saveData.playtime || 0,
                     bossesDefeated: saveData.bossesDefeated || 0,
@@ -1298,6 +1306,18 @@
                     });
                 }
                 
+                // Filter out any older duplicate database entries (1 slot per player)
+                let uniqueScores = [];
+                let seenNames = new Set();
+                for (let run of scores) {
+                    let name = (run.name || '???').toUpperCase();
+                    if (!seenNames.has(name)) {
+                        seenNames.add(name);
+                        uniqueScores.push(run);
+                    }
+                }
+                scores = uniqueScores;
+                
                 scores = scores.slice(0, 100); // Support top 100
                 
                 list.innerHTML = '';
@@ -1321,7 +1341,16 @@
                     
                     if (tab === 'wave') {
                         subtitle = `WAVE ${run.wave || 0}`;
-                        rightSideText = `${run.flux || 0} F`;
+                        
+                        // Calculate fallback total for older scores
+                        let calcTotal = 5;
+                        for (let i = 1; i < (run.wave || 1); i++) calcTotal += ((i * 7) % 5) + 1;
+                        if ((run.wave || 1) % 10 === 0) calcTotal = 1; // Boss wave
+                        
+                        let kills = run.enemiesKilled !== undefined ? run.enemiesKilled : "?";
+                        let total = run.totalEnemies || calcTotal;
+                        
+                        rightSideText = `${kills} / ${total}`;
                     } else if (tab === 'flux') {
                         subtitle = `LIFETIME EARNINGS`;
                         rightSideText = `${run.lifetimeFlux || 0} F`;
@@ -1517,6 +1546,8 @@
             saveData.leaderboard.push({
                 wave: runWave,
                 flux: runFlux,
+                enemiesKilled: enemiesDestroyedInWave,
+                totalEnemies: totalEnemiesToDestroy,
                 date: new Date().toLocaleDateString()
             });
             saveData.leaderboard.sort((a, b) => b.wave - a.wave || b.flux - a.flux);

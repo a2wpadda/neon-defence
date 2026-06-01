@@ -393,7 +393,7 @@
                     <div id="score-label">Flux Gained</div>
                     <div id="score-display">0</div>
                     <div id="health-bar"></div>
-                    <div id="emp-bar-container"><div id="emp-bar-fill"></div></div>
+                    <div id="emp-bar-container" class="hidden"><div id="emp-bar-fill"></div></div>
                 </div>
                 
                 <div id="wave-container">
@@ -507,6 +507,23 @@
                         </div>
                         <button class="btn btn-buy" id="btn-multi" onclick="buyUpgrade('multi')"><span id="cost-multi">750</span> F</button>
                     </div>
+
+                    <div class="upgrade-row" id="row-emp">
+                        <div class="upgrade-info">
+                            <h3>EMP Generator <span id="lvl-emp" class="lvl-badge">0</span></h3>
+                            <p>Unlocks the devastating screen-clearing Electromagnetic Pulse.</p>
+                        </div>
+                        <button class="btn btn-buy" id="btn-emp" onclick="buyUpgrade('emp')"><span id="cost-emp">100</span> F</button>
+                    </div>
+
+                    <div class="upgrade-row" id="row-empCooldown">
+                        <div class="lock-overlay" id="lock-empCooldown">Requires EMP Lv 1</div>
+                        <div class="upgrade-info">
+                            <h3>EMP Cooldown <span id="lvl-empCooldown" class="lvl-badge">0</span></h3>
+                            <p>Reduces the charge required to trigger the EMP.</p>
+                        </div>
+                        <button class="btn btn-buy" id="btn-empCooldown" onclick="buyUpgrade('empCooldown')"><span id="cost-empCooldown">50</span> F</button>
+                    </div>
                 </div>
             </div>
 
@@ -606,7 +623,7 @@
         const STORAGE_KEY = 'neonDefenceDataV22_Restart';
         let saveData = { 
             currentWave: 1, flux: 0, barricadeTotal: 0, 
-            upgrades: {width: 1, speed: 1, multi: 1, health: 0}, 
+            upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0}, 
             leaderboard: [], lifetimeFlux: 0, playtime: 0,
             bossesDefeated: 0, maxPerfectWave: 0, barricadesBuilt: 0, fastestWaveTime: 9999
         };
@@ -663,9 +680,13 @@
         let currentWaveTime = 0;
         let hasTakenDamageThisWave = false;
         
+        const SHIELD_RADIUS = 80;
+        const BARRICADE_BASE_RADIUS = 130;
+        const SHIELD_THICKNESS = 10;
+        
         // EMP Variables
         let empCharge = 0;
-        const empMax = 100;
+        let empMax = 100;
         let empActive = false;
         let empRadius = 0;
 
@@ -747,7 +768,7 @@
 
         const initAuthSystem = async () => {
             if (isOfflineMode) {
-                authSubLabel.innerText = "LOCAL PROFILE (GITHUB EDITION)";
+                authSubLabel.innerText = "LOCAL PROFILE";
                 authSubLabel.className = "text-xs text-cyan-400 font-bold uppercase tracking-widest mb-4";
                 handleAuthChanged({ uid: 'local-offline-pilot' });
                 return;
@@ -758,7 +779,7 @@
                 } else { await signInAnonymously(auth); }
             } catch (e) {
                 isOfflineMode = true;
-                authSubLabel.innerText = "LOCAL PROFILE (OFFLINE MODE)";
+                authSubLabel.innerText = "LOCAL PROFILE";
                 authSubLabel.className = "text-xs text-yellow-500 font-bold uppercase tracking-widest mb-4";
                 handleAuthChanged({ uid: 'local-offline-pilot' });
             }
@@ -872,6 +893,12 @@
         }
 
         function updateEMPUI() {
+            if (!saveData.upgrades.emp) {
+                document.getElementById('emp-bar-container').classList.add('hidden');
+                btnEmpMobile.classList.add('hidden');
+                return;
+            }
+            document.getElementById('emp-bar-container').classList.remove('hidden');
             empBarFill.style.width = `${Math.min(100, (empCharge / empMax) * 100)}%`;
             if (empCharge >= empMax) {
                 empBarFill.style.background = '#fff';
@@ -885,7 +912,7 @@
         }
 
         function triggerEMP() {
-            if (empCharge < empMax || !gameActive || isPaused) return;
+            if (empCharge < empMax || !gameActive || isPaused || !saveData.upgrades.emp) return;
             empCharge = 0;
             empActive = true;
             empRadius = 20;
@@ -923,6 +950,7 @@
         }
 
         function addEMPCharge(amount) {
+            if (!saveData.upgrades.emp) return;
             if (empCharge < empMax) {
                 empCharge = Math.min(empMax, empCharge + amount);
                 updateEMPUI();
@@ -981,6 +1009,14 @@
             document.getElementById('lvl-speed').innerText = up.speed; document.getElementById('cost-speed').innerText = up.speed >= 5 ? 'MAX' : up.speed * 25;
             document.getElementById('lvl-health').innerText = up.health; document.getElementById('cost-health').innerText = up.health >= 5 ? 'MAX' : (up.health + 1) * 75;
             document.getElementById('lvl-multi').innerText = up.multi; document.getElementById('cost-multi').innerText = up.multi === 1 ? 750 : (up.multi === 2 ? 2000 : 'MAX');
+            
+            let empLv = up.emp || 0;
+            document.getElementById('lvl-emp').innerText = empLv; 
+            document.getElementById('cost-emp').innerText = empLv >= 1 ? 'MAX' : 100;
+            
+            let empCdLv = up.empCooldown || 0;
+            document.getElementById('lvl-empCooldown').innerText = empCdLv; 
+            document.getElementById('cost-empCooldown').innerText = empCdLv >= 5 ? 'MAX' : 50 + (empCdLv * 25);
 
             const checkLock = (id, condition) => {
                 const row = document.getElementById(`row-${id}`); const lock = document.getElementById(`lock-${id}`); const btn = document.getElementById(`btn-${id}`);
@@ -988,6 +1024,7 @@
                 else { row.classList.add('locked'); row.style.order = '1'; lock.classList.remove('hidden'); if(btn) btn.disabled = true; }
             };
             checkLock('speed', up.width >= 2); checkLock('health', up.speed >= 2); checkLock('multi', up.width >= 3);
+            checkLock('empCooldown', (up.emp || 0) >= 1);
 
             const isShopUnlocked = up.health >= 1;
             ['btn-open-barricade-shop', 'btn-open-shop-breached'].forEach(id => {
@@ -1003,6 +1040,15 @@
             const barricadeCost = 5 + (saveData.barricadeTotal * 5);
             if (saveData.barricadeTotal >= 10) { buyBBtn.disabled = true; buyBBtn.innerText = "MAX"; } 
             else { buyBBtn.disabled = false; buyBBtn.innerText = `${barricadeCost} F`; }
+        }
+
+        function renderHealth() {
+            healthBarEl.innerHTML = '';
+            for(let i = 0; i < maxHealth; i++) {
+                const seg = document.createElement('div');
+                seg.className = 'health-seg' + (i >= currentHealth ? ' lost' : '');
+                healthBarEl.appendChild(seg);
+            }
         }
 
         async function saveGame() {
@@ -1153,6 +1199,10 @@
             if (type === 'speed') cost = up.speed * 25;
             if (type === 'multi') { cost = (up.multi === 1) ? 750 : 2000; max = 3; }
             if (type === 'health') { cost = (up.health + 1) * 75; max = 5; }
+            if (type === 'emp') { cost = 100; max = 1; }
+            if (type === 'empCooldown') { cost = 50 + ((up.empCooldown || 0) * 25); max = 5; }
+            
+            up[type] = up[type] || 0;
             
             if (up[type] < max && saveData.flux >= cost) { saveData.flux -= cost; up[type]++; saveGame(); }
         }
@@ -1181,6 +1231,8 @@
 
             difficulty = 1 + (saveData.currentWave - 1) * 0.12;
             maxHealth = 5 + saveData.upgrades.health;
+            empMax = 100 - ((saveData.upgrades.empCooldown || 0) * 10);
+            
             if (fullHeal) { currentHealth = maxHealth; empCharge = 0; updateEMPUI(); }
             
             setupBarricades();
@@ -1229,7 +1281,7 @@
             let isImprovement = (runWave > bestWave) || (runWave === bestWave && runFlux > bestFlux);
             
             saveData.leaderboard.push({ wave: runWave, flux: runFlux, enemiesKilled: enemiesDestroyedInWave, totalEnemies: totalEnemiesToDestroy, date: new Date().toLocaleDateString() });
-            saveData.leaderboard.sort((a, b) => b.wave - a.wave || b.flux - a.flux); saveData.leaderboard = saveData.leaderboard.slice(0, 10);
+            saveData.leaderboard.sort((a, b) => b.wave - a.wave || b.flux - a.flux); saveData.leaderboard = saveData.leaderboard.slice(0, 100);
             
             saveData.currentWave = Math.max(1, saveData.currentWave - 1); saveGame();
             finalScoreEl.innerText = runFlux; document.getElementById('restart-wave-num').innerText = saveData.currentWave; barricadeIndicator.classList.add('hidden');

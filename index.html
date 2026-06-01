@@ -73,6 +73,7 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
+            width: 120px;
         }
         #score-display {
             font-size: 1.8rem;
@@ -104,6 +105,21 @@
         .health-seg.lost {
             background: rgba(0, 255, 255, 0.1);
             box-shadow: none;
+        }
+        #emp-bar-container {
+            width: 100%;
+            height: 6px;
+            background: rgba(0, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 2px;
+        }
+        #emp-bar-fill {
+            width: 0%;
+            height: 100%;
+            background: #0ff;
+            box-shadow: 0 0 8px #0ff;
+            transition: width 0.2s ease, background 0.3s ease;
         }
         
         #flux-container {
@@ -180,17 +196,16 @@
             flex-direction: column;
             gap: 1.25rem;
         }
-        .shop-scroll::-webkit-scrollbar { width: 8px; }
+        .shop-scroll::-webkit-scrollbar { width: 6px; }
         .shop-scroll::-webkit-scrollbar-track { background: rgba(0, 255, 255, 0.05); border-radius: 10px; }
         .shop-scroll::-webkit-scrollbar-thumb { background: #0ff; border-radius: 10px; box-shadow: inset 0 0 6px rgba(0,0,0,0.3); }
 
-        /* Hidden scrollbar class for horizontal swipe menus */
         .hide-scrollbar {
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
         .hide-scrollbar::-webkit-scrollbar {
-            display: none; /* Chrome, Safari and Opera */
+            display: none;
         }
 
         .hidden { display: none !important; }
@@ -314,7 +329,28 @@
         }
         #btn-pause:active { transform: scale(0.9); }
         
-        /* Custom checkbox style */
+        #btn-emp-mobile {
+            position: absolute;
+            bottom: 120px;
+            right: 20px;
+            background: #fff;
+            color: #000;
+            padding: 1rem 1.5rem;
+            border-radius: 50px;
+            font-weight: 900;
+            font-size: 1.2rem;
+            pointer-events: auto;
+            box-shadow: 0 0 30px #fff;
+            border: none;
+            z-index: 15;
+            animation: pulse-emp 1s infinite alternate;
+        }
+        
+        @keyframes pulse-emp {
+            0% { transform: scale(1); box-shadow: 0 0 20px #fff; }
+            100% { transform: scale(1.05); box-shadow: 0 0 40px #0ff; }
+        }
+
         input[type="checkbox"] {
             appearance: none;
             background-color: rgba(0, 0, 0, 0.5);
@@ -357,6 +393,7 @@
                     <div id="score-label">Flux Gained</div>
                     <div id="score-display">0</div>
                     <div id="health-bar"></div>
+                    <div id="emp-bar-container"><div id="emp-bar-fill"></div></div>
                 </div>
                 
                 <div id="wave-container">
@@ -376,7 +413,8 @@
                 BARRICADES: <span id="active-barricade-count">0</span>
             </div>
             
-            <!-- Auth Menu (New) -->
+            <button id="btn-emp-mobile" class="hidden" onclick="triggerEMP()">EMP READY</button>
+            
             <div id="auth-modal" class="absolute bg-black/95 backdrop-blur-[25px] p-10 rounded-[32px] border-2 border-[#0ff] text-center pointer-events-auto flex flex-col z-50 shadow-[0_0_100px_rgba(0,255,255,0.15)] w-[90vw] max-w-[400px] gap-4" style="top: 50%; left: 50%; transform: translate(-50%, -50%);">
                 <h1 class="modal-title glow-text mb-2 text-4xl">WELCOME</h1>
                 <p id="auth-sub-label" class="text-xs text-gray-400 font-bold uppercase tracking-widest mb-4">Secure Profile Connection</p>
@@ -399,7 +437,6 @@
                 </div>
             </div>
 
-            <!-- Start Menu -->
             <div id="menu" class="hidden">
                 <h1 class="text-4xl font-black glow-text italic mb-1">NEON DEFENCE</h1>
                 <p class="text-gray-400 text-xs font-bold mb-6 uppercase tracking-widest">Wave <span id="start-wave-num" class="text-white">1</span> Ready</p>
@@ -413,11 +450,9 @@
                         <div id="unlock-instruction" class="unlock-hint">Upgrade Health to unlock</div>
                     </div>
                 </div>
-                <!-- Sign Out Button -->
                 <button id="btn-signout" class="mt-6 text-xs text-red-500 font-bold tracking-widest uppercase underline hidden pointer-events-auto" onclick="handleSignOut()">Disconnect Profile</button>
             </div>
 
-            <!-- Pause Menu -->
             <div id="pause-menu" class="hidden">
                 <h1 class="text-4xl font-black text-white mb-2 tracking-widest">PAUSED</h1>
                 <p class="text-[#0ff] text-xs font-bold mb-8 uppercase tracking-widest animate-pulse">SYSTEM STANDBY</p>
@@ -427,7 +462,6 @@
                 </div>
             </div>
 
-            <!-- Upgrades Menu -->
             <div id="shop" class="hidden">
                 <button class="btn-exit" onclick="toggleModal('shop', false)">×</button>
                 <div class="flex justify-between items-end mb-4 border-b-2 border-white/10 pb-4 mt-20">
@@ -444,9 +478,7 @@
                             <h3>Shield Span <span id="lvl-width" class="lvl-badge">1</span></h3>
                             <p>Extends the defensive arc, covering more of the core's perimeter.</p>
                         </div>
-                        <button class="btn btn-buy" onclick="buyUpgrade('width')">
-                            <span id="cost-width">15</span> F
-                        </button>
+                        <button class="btn btn-buy" onclick="buyUpgrade('width')"><span id="cost-width">15</span> F</button>
                     </div>
 
                     <div class="upgrade-row" id="row-speed">
@@ -455,9 +487,7 @@
                             <h3>Rotation Speed <span id="lvl-speed" class="lvl-badge">1</span></h3>
                             <p>Increases kinetic rotation for faster intercept timing.</p>
                         </div>
-                        <button class="btn btn-buy" id="btn-speed" onclick="buyUpgrade('speed')">
-                            <span id="cost-speed">25</span> F
-                        </button>
+                        <button class="btn btn-buy" id="btn-speed" onclick="buyUpgrade('speed')"><span id="cost-speed">25</span> F</button>
                     </div>
 
                     <div class="upgrade-row" id="row-health">
@@ -466,9 +496,7 @@
                             <h3>Health <span id="lvl-health" class="lvl-badge">0</span></h3>
                             <p>Reinforces core structure. Unlocks the Perimeter Shop.</p>
                         </div>
-                        <button class="btn btn-buy" id="btn-health" onclick="buyUpgrade('health')">
-                            <span id="cost-health">75</span> F
-                        </button>
+                        <button class="btn btn-buy" id="btn-health" onclick="buyUpgrade('health')"><span id="cost-health">75</span> F</button>
                     </div>
 
                     <div class="upgrade-row" id="row-multi">
@@ -477,14 +505,11 @@
                             <h3>Multi-Shields <span id="lvl-multi" class="lvl-badge">1</span></h3>
                             <p>Deploys additional orbiting shield modules for total coverage.</p>
                         </div>
-                        <button class="btn btn-buy" id="btn-multi" onclick="buyUpgrade('multi')">
-                            <span id="cost-multi">750</span> F
-                        </button>
+                        <button class="btn btn-buy" id="btn-multi" onclick="buyUpgrade('multi')"><span id="cost-multi">750</span> F</button>
                     </div>
                 </div>
             </div>
 
-            <!-- Shop Menu -->
             <div id="barricade-shop" class="hidden">
                 <button class="btn-exit" onclick="toggleModal('barricade-shop', false)">×</button>
                 <div class="flex justify-between items-end mb-4 border-b-2 border-white/10 pb-4 mt-20">
@@ -501,18 +526,12 @@
                             <h3>Barricades <span id="owned-barricades-badge" class="lvl-badge">0 / 10</span></h3>
                             <p>Permanent defensive unit that intercepts one enemy per wave.</p>
                         </div>
-                        <button class="btn btn-buy" id="btn-buy-barricade" onclick="buyBarricade()">
-                            5 F
-                        </button>
+                        <button class="btn btn-buy" id="btn-buy-barricade" onclick="buyBarricade()">5 F</button>
                     </div>
-                    
-                    <div class="p-8 text-center text-gray-500 text-sm font-bold italic opacity-60">
-                        Units automatically redeploy every mission cycle.
-                    </div>
+                    <div class="p-8 text-center text-gray-500 text-sm font-bold italic opacity-60">Units automatically redeploy every mission cycle.</div>
                 </div>
             </div>
 
-            <!-- Leaderboard Menu -->
             <div id="leaderboard-modal" class="hidden">
                 <button class="btn-exit" onclick="toggleModal('leaderboard-modal', false)">×</button>
                 <div class="border-b-2 border-white/10 pb-4 mt-16 text-left">
@@ -532,7 +551,6 @@
                 </div>
             </div>
 
-            <!-- Game Over -->
             <div id="game-over" class="hidden">
                 <h1 class="text-3xl font-black text-red-500 mb-1">BREACHED</h1>
                 <p class="text-gray-400 text-xs font-bold mb-6">WAVE REGRESSION ACTIVE</p>
@@ -541,7 +559,6 @@
                     <div class="text-xs text-gray-500 font-bold">Retrying Wave <span id="restart-wave-num">1</span></div>
                 </div>
                 
-                <!-- Auto-Upload Status -->
                 <div id="submit-status" class="text-xs font-bold h-4 mb-4"></div>
 
                 <div class="flex flex-col gap-3">
@@ -563,15 +580,12 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
         import { getFirestore, collection, addDoc, getDocs, serverTimestamp, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
-        // Fix for JSON.parse error if config is empty which crashes the script and breaks window buttons
         let firebaseConfig = {};
         try {
             if (typeof __firebase_config !== 'undefined' && __firebase_config) {
                 firebaseConfig = JSON.parse(__firebase_config);
             }
-        } catch(e) {
-            console.warn("Invalid Firebase config. Falling back securely.", e);
-        }
+        } catch(e) { console.warn("Invalid config. Falling back securely.", e); }
         
         const appId = (typeof __app_id !== 'undefined' && __app_id) ? __app_id : 'default-app-id';
 
@@ -580,23 +594,15 @@
 
         if (firebaseConfig && firebaseConfig.projectId) {
             try {
-                app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-            } catch (e) {
-                console.warn("Firebase initialization failed. Shifting to offline emulate mode:", e);
-                isOfflineMode = true;
-            }
-        } else {
-            isOfflineMode = true;
-        }
+                app = initializeApp(firebaseConfig); auth = getAuth(app); db = getFirestore(app);
+            } catch (e) { isOfflineMode = true; }
+        } else { isOfflineMode = true; }
 
         let currentUser = null;
         let isGuest = false;
         let currentUsername = null;
         let currentPassword = null;
 
-        // --- ALL DOM & STATE VARIABLES ---
         const STORAGE_KEY = 'neonDefenceDataV22_Restart';
         let saveData = { 
             currentWave: 1, flux: 0, barricadeTotal: 0, 
@@ -619,6 +625,8 @@
         const barricadeIndicator = document.getElementById('barricade-indicator');
         const activeBarricadeCountEl = document.getElementById('active-barricade-count');
         const healthBarEl = document.getElementById('health-bar');
+        const empBarFill = document.getElementById('emp-bar-fill');
+        const btnEmpMobile = document.getElementById('btn-emp-mobile');
         const waveProgress = document.getElementById('wave-progress');
         const waveMsg = document.getElementById('wave-msg');
         const waveDisplay = document.getElementById('wave-display');
@@ -651,22 +659,82 @@
         let shakeAmount = 0;
         let lastTime = performance.now();
         let spawnTimer = 0;
-        let currentBaseScreen = 'menu'; // Tracks where 'X' buttons should route back to
+        let currentBaseScreen = 'menu';
         let currentWaveTime = 0;
         let hasTakenDamageThisWave = false;
         
-        const SHIELD_RADIUS = 80;
-        const BARRICADE_BASE_RADIUS = 130;
-        const SHIELD_THICKNESS = 10;
-        // --------------------------------------------------------
+        // EMP Variables
+        let empCharge = 0;
+        const empMax = 100;
+        let empActive = false;
+        let empRadius = 0;
+
+        let audioCtx;
+        let audioInitialized = false;
+
+        function initAudio() {
+            if (!audioInitialized) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                audioInitialized = true;
+            }
+        }
+
+        function playSound(type) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            const now = audioCtx.currentTime;
+            
+            if (type === 'hit') {
+                // Deep Thud
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(0.01, now + 0.1);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now); osc.stop(now + 0.1);
+            } else if (type === 'ping') {
+                // High Ping for Flux
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800 + Math.random() * 200, now);
+                gain.gain.setValueAtTime(0.05, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now); osc.stop(now + 0.1);
+            } else if (type === 'damage') {
+                // Harsh Buzz
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(100, now);
+                osc.frequency.linearRampToValueAtTime(50, now + 0.3);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now); osc.stop(now + 0.3);
+            } else if (type === 'boss') {
+                // Alarm Sweep
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(200, now);
+                osc.frequency.exponentialRampToValueAtTime(600, now + 0.5);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 1.0);
+                osc.start(now); osc.stop(now + 1.0);
+            } else if (type === 'emp') {
+                // Massive bass drop
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1000, now);
+                osc.frequency.exponentialRampToValueAtTime(10, now + 1.0);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 1.0);
+                osc.start(now); osc.stop(now + 1.0);
+            }
+        }
 
         function handleAuthChanged(user) {
             currentUser = user;
-            
-            // Auto-login if we remember them locally
             const savedUsername = localStorage.getItem('neonUsername');
             const savedPassword = localStorage.getItem('neonPassword');
-            
             if (savedUsername && savedPassword && !currentUsername && !isGuest) {
                 document.getElementById('auth-username').value = savedUsername;
                 document.getElementById('auth-password').value = savedPassword;
@@ -677,7 +745,7 @@
             }
         }
 
-        const initAuth = async () => {
+        const initAuthSystem = async () => {
             if (isOfflineMode) {
                 authSubLabel.innerText = "LOCAL PROFILE (GITHUB EDITION)";
                 authSubLabel.className = "text-xs text-cyan-400 font-bold uppercase tracking-widest mb-4";
@@ -687,11 +755,8 @@
             try {
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
+                } else { await signInAnonymously(auth); }
             } catch (e) {
-                console.warn("Unable to start Firebase Auth. Shifting to Offline Mode.", e);
                 isOfflineMode = true;
                 authSubLabel.innerText = "LOCAL PROFILE (OFFLINE MODE)";
                 authSubLabel.className = "text-xs text-yellow-500 font-bold uppercase tracking-widest mb-4";
@@ -699,410 +764,196 @@
             }
         };
 
-        if (!isOfflineMode) {
-            initAuth();
-            onAuthStateChanged(auth, handleAuthChanged);
-        } else {
-            initAuth();
-        }
+        if (!isOfflineMode) { initAuthSystem(); onAuthStateChanged(auth, handleAuthChanged); } 
+        else { initAuthSystem(); }
 
         async function handleAuth(action) {
+            initAudio();
             const usernameInput = document.getElementById('auth-username').value.trim().toUpperCase();
             const passwordInput = document.getElementById('auth-password').value;
             const rememberMe = document.getElementById('auth-remember').checked;
             const errEl = document.getElementById('auth-error');
             
-            errEl.innerText = "";
-            errEl.className = "text-xs text-yellow-400 font-bold h-4";
+            errEl.innerText = ""; errEl.className = "text-xs text-yellow-400 font-bold h-4";
             
             if (action === 'guest') {
-                isGuest = true;
-                currentUsername = null;
-                currentPassword = null;
-                authModal.classList.add('hidden');
-                signOutBtn.classList.remove('hidden');
-                menu.classList.remove('hidden');
-                updateUI();
-                return;
+                isGuest = true; currentUsername = null; currentPassword = null;
+                authModal.classList.add('hidden'); signOutBtn.classList.remove('hidden'); menu.classList.remove('hidden');
+                updateUI(); return;
             }
-
             if(!usernameInput || !passwordInput) {
-                errEl.className = "text-xs text-red-500 font-bold h-4";
-                errEl.innerText = "USERNAME AND PASSWORD REQUIRED";
-                return;
+                errEl.className = "text-xs text-red-500 font-bold h-4"; errEl.innerText = "USERNAME AND PASSWORD REQUIRED"; return;
             }
 
-            // Sanitisation check (avoid restricted words)
-            const badWords = ['FUCK', 'SHIT', 'BITCH', 'CUNT', 'NIGG', 'FAGG', 'DICK', 'PORN', 'CUM', 'SEX', 'TITS', 'WHORE', 'SLUT', 'RAPE', 'NAZI', 'PEDO', 'COCK', 'ANUS', 'PISS'];
-            for (let word of badWords) {
-                if (usernameInput.includes(word)) {
-                    errEl.className = "text-xs text-red-500 font-bold h-4";
-                    errEl.innerText = "USERNAME CONTAINS RESTRICTED WORDS.";
-                    return;
-                }
-            }
-
-            // AI Profanity Check (Solves the Scunthorpe Problem on Canvas)
-            if (action === 'go' && !isOfflineMode) {
-                errEl.className = "text-xs text-yellow-400 font-bold h-4";
-                errEl.innerText = "VERIFYING NETWORK SECURITY...";
-                
-                try {
-                    const apiKey = ""; // Canvas injects this automatically
-                    if (apiKey) {
-                        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
-                        const prompt = `You are a moderation AI for an arcade game. Evaluate the username: "${usernameInput}". Does it contain profanity, extreme toxicity, or explicit content? Answer ONLY with "APPROPRIATE" or "INAPPROPRIATE". Beware of the "Scunthorpe problem" (allow innocent names that happen to contain bad substrings like 'ass' in 'Cassandra').`;
-                        const payload = { contents: [{ parts: [{ text: prompt }] }] };
-                        
-                        const response = await fetch(apiUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
-                        
-                        const result = await response.json();
-                        const aiDecision = result.candidates?.[0]?.content?.parts?.[0]?.text?.trim().toUpperCase() || "";
-                        
-                        if (aiDecision.includes("INAPPROPRIATE")) {
-                            errEl.className = "text-xs text-red-500 font-bold h-4";
-                            errEl.innerText = "USERNAME REJECTED BY NETWORK SECURITY.";
-                            return;
-                        }
-                    }
-                } catch(e) {
-                    console.log("Local filter used as fallback.");
+            const encodedBadWords = ['RlVDSw==', 'U0hJVA==', 'QklUQ0g=', 'Q1VOVA==', 'TklHRw==', 'RkFHRw==', 'RElDSw==', 'UE9STg==', 'Q1VN', 'U0VY', 'VElUUw==', 'V0hPUkU=', 'U0xVVA==', 'UkFQRQ==', 'TkFaSQ==', 'UEVETw==', 'Q09DSw==', 'QU5VUw==', 'UElTUw=='];
+            for (let encodedWord of encodedBadWords) {
+                if (usernameInput.includes(atob(encodedWord))) {
+                    errEl.className = "text-xs text-red-500 font-bold h-4"; errEl.innerText = "USERNAME CONTAINS RESTRICTED WORDS."; return;
                 }
             }
 
             try {
                 if (isOfflineMode) {
-                    // --- OFFLINE SIMULATION STORAGE ---
                     errEl.innerText = "CONNECTING LOCAL ENGINE...";
                     let localProfiles = JSON.parse(localStorage.getItem('neon_emulated_profiles') || '{}');
-                    
                     if (localProfiles[usernameInput]) {
-                        // Check password
-                        if (localProfiles[usernameInput].password !== passwordInput) {
-                            throw new Error("INVALID PASSWORD.");
-                        }
-                        
-                        currentUsername = usernameInput;
-                        currentPassword = passwordInput;
-                        
-                        if (rememberMe) {
-                            localStorage.setItem('neonUsername', currentUsername);
-                            localStorage.setItem('neonPassword', currentPassword);
-                        } else {
-                            localStorage.removeItem('neonUsername');
-                            localStorage.removeItem('neonPassword');
-                        }
+                        if (localProfiles[usernameInput].password !== passwordInput) throw new Error("INVALID PASSWORD.");
+                        currentUsername = usernameInput; currentPassword = passwordInput;
+                        if (rememberMe) { localStorage.setItem('neonUsername', currentUsername); localStorage.setItem('neonPassword', currentPassword); } 
+                        else { localStorage.removeItem('neonUsername'); localStorage.removeItem('neonPassword'); }
                         
                         saveData = localProfiles[usernameInput].saveData || { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0}, leaderboard: [] };
                         localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
+                        errEl.className = "text-xs text-green-400 font-bold h-4"; errEl.innerText = `WELCOME BACK, ${currentUsername}!`;
                         
-                        errEl.className = "text-xs text-green-400 font-bold h-4";
-                        errEl.innerText = `WELCOME BACK, ${currentUsername}!`;
-                        
-                        setTimeout(() => {
-                            authModal.classList.add('hidden');
-                            signOutBtn.classList.remove('hidden');
-                            menu.classList.remove('hidden');
-                            updateUI();
-                        }, 700);
+                        setTimeout(() => { authModal.classList.add('hidden'); signOutBtn.classList.remove('hidden'); menu.classList.remove('hidden'); updateUI(); }, 700);
                     } else {
-                        // Register New Local Account
                         errEl.innerText = "CREATING PROFILE LOCALLY...";
-                        currentUsername = usernameInput;
-                        currentPassword = passwordInput;
+                        currentUsername = usernameInput; currentPassword = passwordInput;
+                        if (rememberMe) { localStorage.setItem('neonUsername', currentUsername); localStorage.setItem('neonPassword', currentPassword); } 
+                        else { localStorage.removeItem('neonUsername'); localStorage.removeItem('neonPassword'); }
                         
-                        if (rememberMe) {
-                            localStorage.setItem('neonUsername', currentUsername);
-                            localStorage.setItem('neonPassword', currentPassword);
-                        } else {
-                            localStorage.removeItem('neonUsername');
-                            localStorage.removeItem('neonPassword');
-                        }
-                        
-                        saveData = {
-                            currentWave: 1, flux: 0, barricadeTotal: 0, 
-                            upgrades: {width: 1, speed: 1, multi: 1, health: 0},
-                            leaderboard: []
-                        };
-                        
+                        saveData = { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0}, leaderboard: [] };
                         localProfiles[usernameInput] = { password: currentPassword, saveData: saveData };
                         localStorage.setItem('neon_emulated_profiles', JSON.stringify(localProfiles));
                         localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
+                        errEl.className = "text-xs text-cyan-400 font-bold h-4"; errEl.innerText = `NEW PROFILE CREATED!`;
                         
-                        errEl.className = "text-xs text-cyan-400 font-bold h-4";
-                        errEl.innerText = `NEW PROFILE CREATED!`;
-                        
-                        setTimeout(() => {
-                            authModal.classList.add('hidden');
-                            signOutBtn.classList.remove('hidden');
-                            menu.classList.remove('hidden');
-                            updateUI();
-                        }, 700);
+                        setTimeout(() => { authModal.classList.add('hidden'); signOutBtn.classList.remove('hidden'); menu.classList.remove('hidden'); updateUI(); }, 700);
                     }
                     return;
                 }
 
-                // --- ONLINE CLOUD STORAGE ---
                 const saveRef = doc(db, 'artifacts', appId, 'public', 'data', 'saves', usernameInput);
-                
                 if (action === 'go') {
                     errEl.innerText = "AUTHENTICATING...";
                     const docSnap = await getDoc(saveRef);
                     if (docSnap.exists()) {
                         const data = docSnap.data();
-                        
-                        if (data.password !== passwordInput) {
-                            throw new Error("INVALID PASSWORD.");
-                        }
-
-                        currentUsername = usernameInput;
-                        currentPassword = passwordInput;
-                        
-                        if (rememberMe) {
-                            localStorage.setItem('neonUsername', currentUsername);
-                            localStorage.setItem('neonPassword', currentPassword);
-                        } else {
-                            localStorage.removeItem('neonUsername');
-                            localStorage.removeItem('neonPassword');
-                        }
+                        if (data.password !== passwordInput) throw new Error("INVALID PASSWORD.");
+                        currentUsername = usernameInput; currentPassword = passwordInput;
+                        if (rememberMe) { localStorage.setItem('neonUsername', currentUsername); localStorage.setItem('neonPassword', currentPassword); } 
+                        else { localStorage.removeItem('neonUsername'); localStorage.removeItem('neonPassword'); }
                         
                         saveData = data.saveData || { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0}, leaderboard: [] };
                         if(!saveData.upgrades) saveData.upgrades = {width: 1, speed: 1, multi: 1, health: 0};
                         if(!saveData.leaderboard) saveData.leaderboard = [];
-                        
                         localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
                         
-                        errEl.className = "text-xs text-green-400 font-bold h-4";
-                        errEl.innerText = `WELCOME BACK, ${currentUsername}!`;
-                        
-                        setTimeout(() => {
-                            authModal.classList.add('hidden');
-                            signOutBtn.classList.remove('hidden');
-                            menu.classList.remove('hidden');
-                            updateUI();
-                        }, 700);
+                        errEl.className = "text-xs text-green-400 font-bold h-4"; errEl.innerText = `WELCOME BACK, ${currentUsername}!`;
+                        setTimeout(() => { authModal.classList.add('hidden'); signOutBtn.classList.remove('hidden'); menu.classList.remove('hidden'); updateUI(); }, 700);
                     } else {
                         errEl.innerText = "CREATING SECURE PROFILE...";
-                        currentUsername = usernameInput;
-                        currentPassword = passwordInput;
+                        currentUsername = usernameInput; currentPassword = passwordInput;
+                        if (rememberMe) { localStorage.setItem('neonUsername', currentUsername); localStorage.setItem('neonPassword', currentPassword); } 
+                        else { localStorage.removeItem('neonUsername'); localStorage.removeItem('neonPassword'); }
                         
-                        if (rememberMe) {
-                            localStorage.setItem('neonUsername', currentUsername);
-                            localStorage.setItem('neonPassword', currentPassword);
-                        } else {
-                            localStorage.removeItem('neonUsername');
-                            localStorage.removeItem('neonPassword');
-                        }
-                        
-                        saveData = {
-                            currentWave: 1, flux: 0, barricadeTotal: 0, 
-                            upgrades: {width: 1, speed: 1, multi: 1, health: 0},
-                            leaderboard: []
-                        };
-                        
+                        saveData = { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0}, leaderboard: [] };
                         await setDoc(saveRef, { password: currentPassword, saveData: saveData });
                         localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
                         
-                        errEl.className = "text-xs text-cyan-400 font-bold h-4";
-                        errEl.innerText = `NEW SECURE PROFILE CREATED!`;
-                        
-                        setTimeout(() => {
-                            authModal.classList.add('hidden');
-                            signOutBtn.classList.remove('hidden');
-                            menu.classList.remove('hidden');
-                            updateUI();
-                        }, 700);
+                        errEl.className = "text-xs text-cyan-400 font-bold h-4"; errEl.innerText = `NEW SECURE PROFILE CREATED!`;
+                        setTimeout(() => { authModal.classList.add('hidden'); signOutBtn.classList.remove('hidden'); menu.classList.remove('hidden'); updateUI(); }, 700);
                     }
                 }
             } catch (e) {
-                console.error(e);
-                errEl.className = "text-xs text-red-500 font-bold h-4";
-                errEl.innerText = e.message.replace("Firebase: ", "");
+                console.error(e); errEl.className = "text-xs text-red-500 font-bold h-4"; errEl.innerText = e.message.replace("Firebase: ", "");
             }
         }
 
         async function handleSignOut() {
-            currentUsername = null;
-            currentPassword = null;
-            isGuest = false;
-            localStorage.removeItem('neonUsername');
-            localStorage.removeItem('neonPassword');
-            
-            // Restart waves and total flux upon disconnect
-            saveData = { 
-                currentWave: 1, 
-                flux: 0, 
-                barricadeTotal: 0, 
-                upgrades: {width: 1, speed: 1, multi: 1, health: 0}, 
-                leaderboard: [] 
-            };
+            currentUsername = null; currentPassword = null; isGuest = false;
+            localStorage.removeItem('neonUsername'); localStorage.removeItem('neonPassword');
+            saveData = { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0}, leaderboard: [] };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
-            
-            menu.classList.add('hidden');
-            authModal.classList.remove('hidden');
-            document.getElementById('auth-username').value = '';
-            document.getElementById('auth-password').value = '';
-            updateUI();
+            menu.classList.add('hidden'); authModal.classList.remove('hidden');
+            document.getElementById('auth-username').value = ''; document.getElementById('auth-password').value = '';
+            document.getElementById('auth-error').innerText = ''; updateUI();
         }
 
-        async function saveGame() {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
-            updateUI();
-
-            if (currentUsername) {
-                if (isOfflineMode) {
-                    let localProfiles = JSON.parse(localStorage.getItem('neon_emulated_profiles') || '{}');
-                    if (localProfiles[currentUsername]) {
-                        localProfiles[currentUsername].saveData = saveData;
-                        localStorage.setItem('neon_emulated_profiles', JSON.stringify(localProfiles));
-                    }
-                } else if (currentPassword) {
-                    try {
-                        const saveRef = doc(db, 'artifacts', appId, 'public', 'data', 'saves', currentUsername);
-                        await setDoc(saveRef, { password: currentPassword, saveData: saveData });
-                    } catch (e) {
-                        console.error("Cloud sync failed", e);
-                    }
-                }
+        function updateEMPUI() {
+            empBarFill.style.width = `${Math.min(100, (empCharge / empMax) * 100)}%`;
+            if (empCharge >= empMax) {
+                empBarFill.style.background = '#fff';
+                empBarFill.style.boxShadow = '0 0 15px #fff';
+                btnEmpMobile.classList.remove('hidden');
+            } else {
+                empBarFill.style.background = '#0ff';
+                empBarFill.style.boxShadow = '0 0 8px #0ff';
+                btnEmpMobile.classList.add('hidden');
             }
         }
 
-        function updateUI() {
-            // Ensure backwards compatibility with old saves
-            saveData.lifetimeFlux = saveData.lifetimeFlux || 0;
-            saveData.playtime = saveData.playtime || 0;
-
-            fluxEl.innerText = saveData.flux;
-            shopFluxEl.innerText = saveData.flux;
-            bShopFluxEl.innerText = saveData.flux;
-            ownedBarricadesBadge.innerText = `${saveData.barricadeTotal} / 10`;
-            document.getElementById('start-wave-num').innerText = saveData.currentWave;
+        function triggerEMP() {
+            if (empCharge < empMax || !gameActive || isPaused) return;
+            empCharge = 0;
+            empActive = true;
+            empRadius = 20;
+            updateEMPUI();
             
-            if (isGuest) {
-                signOutBtn.innerText = "CONNECT PROFILE";
-                signOutBtn.classList.remove('text-red-500');
-                signOutBtn.classList.add('text-cyan-400');
-            } else {
-                signOutBtn.innerText = "DISCONNECT PROFILE";
-                signOutBtn.classList.remove('text-cyan-400');
-                signOutBtn.classList.add('text-red-500');
-            }
-
-            if (saveData.barricadeTotal > 0) {
-                barricadeIndicator.classList.remove('hidden');
-                activeBarricadeCountEl.innerText = barricadeUnits.filter(b => b.active).length;
-            } else {
-                barricadeIndicator.classList.add('hidden');
-            }
-
-            const up = saveData.upgrades;
-            document.getElementById('lvl-width').innerText = up.width;
-            document.getElementById('cost-width').innerText = up.width >= 5 ? 'MAX' : up.width * 15;
-            document.getElementById('lvl-speed').innerText = up.speed;
-            document.getElementById('cost-speed').innerText = up.speed >= 5 ? 'MAX' : up.speed * 25;
-            document.getElementById('lvl-health').innerText = up.health;
-            document.getElementById('cost-health').innerText = up.health >= 5 ? 'MAX' : (up.health + 1) * 75;
+            playSound('emp');
+            shakeAmount = 40;
             
-            document.getElementById('lvl-multi').innerText = up.multi;
-            document.getElementById('cost-multi').innerText = up.multi === 1 ? 750 : (up.multi === 2 ? 2000 : 'MAX');
-
-            const checkLock = (id, condition) => {
-                const row = document.getElementById(`row-${id}`);
-                const lock = document.getElementById(`lock-${id}`);
-                const btn = document.getElementById(`btn-${id}`);
-                if (condition) {
-                    row.classList.remove('locked');
-                    row.style.order = '0';
-                    lock.classList.add('hidden');
-                    if(btn) btn.disabled = false;
-                } else {
-                    row.classList.add('locked');
-                    row.style.order = '1';
-                    lock.classList.remove('hidden');
-                    if(btn) btn.disabled = true;
-                }
-            };
-
-            checkLock('speed', up.width >= 2);
-            checkLock('health', up.speed >= 2);
-            checkLock('multi', up.width >= 3);
-
-            const isShopUnlocked = up.health >= 1;
-            const bShopBtnMenu = document.getElementById('btn-open-barricade-shop');
-            const bShopBtnBreached = document.getElementById('btn-open-shop-breached');
-            const unlockInstructionMenu = document.getElementById('unlock-instruction');
-            const unlockInstructionBreached = document.getElementById('unlock-instruction-breached');
+            // Vaporize normal enemies
+            enemies.forEach(e => {
+                const points = (e.type === 'stinger' ? 2 : (e.type === 'bouncer' ? 3 : 1));
+                currentRunFlux += points;
+                saveData.lifetimeFlux += points;
+                floatingTexts.push(new FloatingText(e.x, e.y, `+${points} F`, '#fbbf24'));
+                createExplosion(e.x, e.y, '#0ff', 15);
+                enemiesDestroyedInWave++;
+            });
+            enemies = []; 
+            scoreEl.innerText = currentRunFlux;
+            waveProgress.innerText = `DESTROYED: ${Math.min(enemiesDestroyedInWave, totalEnemiesToDestroy)} / ${totalEnemiesToDestroy}`;
             
-            if (isShopUnlocked) {
-                bShopBtnMenu.disabled = false;
-                bShopBtnMenu.innerText = "SHOP";
-                if(bShopBtnBreached) {
-                    bShopBtnBreached.disabled = false;
-                    bShopBtnBreached.innerText = "SHOP";
+            // Damage bosses
+            bosses.forEach(b => {
+                b.hp -= 5;
+                createExplosion(b.x, b.y, b.color, 30);
+                if (b.hp <= 0) {
+                    saveData.bossesDefeated = (saveData.bossesDefeated || 0) + 1; 
+                    const reward = 100 + (b.tier * 50); currentRunFlux += reward; saveData.lifetimeFlux += reward; scoreEl.innerText = currentRunFlux;
+                    floatingTexts.push(new FloatingText(b.x, b.y, `+${reward} F`, '#fbbf24')); 
+                    createExplosion(b.x, b.y, b.color, 100); shakeAmount = 40; playSound('ping');
                 }
-                if(unlockInstructionMenu) unlockInstructionMenu.classList.add('hidden');
-                if(unlockInstructionBreached) unlockInstructionBreached.classList.add('hidden');
-            } else {
-                bShopBtnMenu.disabled = true;
-                bShopBtnMenu.innerText = "SHOP (LOCKED)";
-                if(bShopBtnBreached) {
-                    bShopBtnBreached.disabled = true;
-                    bShopBtnBreached.innerText = "SHOP (LOCKED)";
-                }
-                if(unlockInstructionMenu) unlockInstructionMenu.classList.remove('hidden');
-                if(unlockInstructionBreached) unlockInstructionBreached.classList.remove('hidden');
-            }
-
-            const buyBBtn = document.getElementById('btn-buy-barricade');
-            const barricadeCost = 5 + (saveData.barricadeTotal * 5);
-            if (saveData.barricadeTotal >= 10) {
-                buyBBtn.disabled = true;
-                buyBBtn.innerText = "MAX";
-            } else {
-                buyBBtn.disabled = false;
-                buyBBtn.innerText = `${barricadeCost} F`;
-            }
+            });
+            // Instantly remove destroyed bosses
+            bosses = bosses.filter(b => b.hp > 0);
         }
 
-        function renderHealth() {
-            healthBarEl.innerHTML = '';
-            for(let i = 0; i < maxHealth; i++) {
-                const seg = document.createElement('div');
-                seg.className = 'health-seg' + (i >= currentHealth ? ' lost' : '');
-                healthBarEl.appendChild(seg);
+        function addEMPCharge(amount) {
+            if (empCharge < empMax) {
+                empCharge = Math.min(empMax, empCharge + amount);
+                updateEMPUI();
             }
         }
 
         function resize() {
-            width = window.innerWidth;
-            height = window.innerHeight;
-            canvas.width = width;
-            canvas.height = height;
-            centerX = width / 2;
-            centerY = height / 2;
+            width = window.innerWidth; height = window.innerHeight;
+            canvas.width = width; canvas.height = height;
+            centerX = width / 2; centerY = height / 2;
         }
+        window.addEventListener('resize', resize); resize();
 
-        window.addEventListener('resize', resize);
-        resize();
-        updateUI();
-
-        window.addEventListener('mousedown', handleInput);
+        window.addEventListener('mousedown', (e) => { initAudio(); handleInput(e); });
         window.addEventListener('touchstart', (e) => { 
-            if(e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') {
-                e.preventDefault(); 
-                handleInput(); 
-            }
+            initAudio();
+            if(e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') { e.preventDefault(); handleInput(e); }
         }, { passive: false });
 
         window.addEventListener('keydown', (e) => {
+            initAudio();
             if (e.key === 'Escape' && gameActive) togglePause();
+            if (e.code === 'Space' || e.key === ' ') {
+                if (gameActive && !isPaused) { e.preventDefault(); handleInput(e); }
+            }
+            if (e.key === 'Shift') {
+                if (gameActive && !isPaused) { e.preventDefault(); triggerEMP(); }
+            }
         });
 
-        function handleInput() {
+        function handleInput(e) {
             if (!gameActive || isPaused) return;
             rotationDir *= -1;
         }
@@ -1110,267 +961,126 @@
         function togglePause() {
             if (!gameActive) return;
             isPaused = !isPaused;
-            if (isPaused) {
-                toggleModal('pause-menu', true);
-            } else {
-                toggleModal('none', false);
-            }
+            if (isPaused) { toggleModal('pause-menu', true); } else { toggleModal('none', false); }
         }
 
-        function quitToMenu() {
-            gameActive = false;
-            isPaused = false;
-            enemies.length = 0;
-            bosses.length = 0;
-            particles.length = 0;
-            floatingTexts.length = 0;
-            saveData.flux += currentRunFlux;
-            saveGame();
-            barricadeIndicator.classList.add('hidden');
-            pauseBtn.classList.add('hidden');
-            toggleModal('menu', true); 
-        }
-
-        function toggleModal(id, show) {
-            menu.classList.add('hidden');
-            gameOverScreen.classList.add('hidden');
-            shopModal.classList.add('hidden');
-            barricadeShopModal.classList.add('hidden');
-            pauseMenu.classList.add('hidden');
-            leaderboardModal.classList.add('hidden');
+        function updateUI() {
+            saveData.lifetimeFlux = saveData.lifetimeFlux || 0; saveData.playtime = saveData.playtime || 0;
+            fluxEl.innerText = saveData.flux; shopFluxEl.innerText = saveData.flux; bShopFluxEl.innerText = saveData.flux;
+            ownedBarricadesBadge.innerText = `${saveData.barricadeTotal} / 10`;
+            document.getElementById('start-wave-num').innerText = saveData.currentWave;
             
-            if (id === 'pause-menu') {
-                pauseMenu.classList.remove('hidden');
-            } else if (id === 'menu') {
-                currentBaseScreen = 'menu';
-                menu.classList.remove('hidden');
-            } else if (id === 'game-over') {
-                currentBaseScreen = 'game-over';
-                gameOverScreen.classList.remove('hidden');
-            } else if (show && id) {
-                document.getElementById(id).classList.remove('hidden');
-                if (id === 'leaderboard-modal') renderLeaderboardUI();
-            } else if (id !== 'none') {
-                // Return to the active base screen correctly based on where they came from
-                if (currentBaseScreen === 'game-over') {
-                    gameOverScreen.classList.remove('hidden');
-                } else {
-                    menu.classList.remove('hidden');
+            if (isGuest) { signOutBtn.innerText = "CONNECT PROFILE"; signOutBtn.classList.remove('text-red-500'); signOutBtn.classList.add('text-cyan-400'); } 
+            else { signOutBtn.innerText = "DISCONNECT PROFILE"; signOutBtn.classList.remove('text-cyan-400'); signOutBtn.classList.add('text-red-500'); }
+
+            if (saveData.barricadeTotal > 0) { barricadeIndicator.classList.remove('hidden'); activeBarricadeCountEl.innerText = barricadeUnits.filter(b => b.active).length; } 
+            else { barricadeIndicator.classList.add('hidden'); }
+
+            const up = saveData.upgrades;
+            document.getElementById('lvl-width').innerText = up.width; document.getElementById('cost-width').innerText = up.width >= 5 ? 'MAX' : up.width * 15;
+            document.getElementById('lvl-speed').innerText = up.speed; document.getElementById('cost-speed').innerText = up.speed >= 5 ? 'MAX' : up.speed * 25;
+            document.getElementById('lvl-health').innerText = up.health; document.getElementById('cost-health').innerText = up.health >= 5 ? 'MAX' : (up.health + 1) * 75;
+            document.getElementById('lvl-multi').innerText = up.multi; document.getElementById('cost-multi').innerText = up.multi === 1 ? 750 : (up.multi === 2 ? 2000 : 'MAX');
+
+            const checkLock = (id, condition) => {
+                const row = document.getElementById(`row-${id}`); const lock = document.getElementById(`lock-${id}`); const btn = document.getElementById(`btn-${id}`);
+                if (condition) { row.classList.remove('locked'); row.style.order = '0'; lock.classList.add('hidden'); if(btn) btn.disabled = false; } 
+                else { row.classList.add('locked'); row.style.order = '1'; lock.classList.remove('hidden'); if(btn) btn.disabled = true; }
+            };
+            checkLock('speed', up.width >= 2); checkLock('health', up.speed >= 2); checkLock('multi', up.width >= 3);
+
+            const isShopUnlocked = up.health >= 1;
+            ['btn-open-barricade-shop', 'btn-open-shop-breached'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) { el.disabled = !isShopUnlocked; el.innerText = isShopUnlocked ? "SHOP" : "SHOP (LOCKED)"; }
+            });
+            ['unlock-instruction', 'unlock-instruction-breached'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) { if (isShopUnlocked) el.classList.add('hidden'); else el.classList.remove('hidden'); }
+            });
+
+            const buyBBtn = document.getElementById('btn-buy-barricade');
+            const barricadeCost = 5 + (saveData.barricadeTotal * 5);
+            if (saveData.barricadeTotal >= 10) { buyBBtn.disabled = true; buyBBtn.innerText = "MAX"; } 
+            else { buyBBtn.disabled = false; buyBBtn.innerText = `${barricadeCost} F`; }
+        }
+
+        async function saveGame() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData)); updateUI();
+            if (currentUsername) {
+                if (isOfflineMode) {
+                    let localProfiles = JSON.parse(localStorage.getItem('neon_emulated_profiles') || '{}');
+                    if (localProfiles[currentUsername]) { localProfiles[currentUsername].saveData = saveData; localStorage.setItem('neon_emulated_profiles', JSON.stringify(localProfiles)); }
+                } else if (currentPassword) {
+                    try { const saveRef = doc(db, 'artifacts', appId, 'public', 'data', 'saves', currentUsername); await setDoc(saveRef, { password: currentPassword, saveData: saveData }); } 
+                    catch (e) { console.error("Cloud sync failed", e); }
                 }
             }
-            updateUI();
         }
 
-        // Helper to format playtime seconds into Hours and Minutes
         function formatTime(seconds) {
             if (!seconds) return "0m";
-            const h = Math.floor(seconds / 3600);
-            const m = Math.floor((seconds % 3600) / 60);
-            if (h > 0) return `${h}h ${m}m`;
-            return `${m}m`;
+            const h = Math.floor(seconds / 3600); const m = Math.floor((seconds % 3600) / 60);
+            return h > 0 ? `${h}h ${m}m` : `${m}m`;
         }
-
-        async function submitGlobalScore() {
-            if (!currentUser && !isOfflineMode) {
-                console.error("User not authenticated.");
-                return;
-            }
-            const playerName = currentUsername || 'GUEST';
-            const statusEl = document.getElementById('submit-status');
-            
-            statusEl.innerText = "UPLOADING NEW RECORD...";
-            statusEl.className = "text-xs text-yellow-400 font-bold h-4 mb-4 animate-pulse";
-            
-            // Extract the true best wave from local records
-            let bestWave = 0;
-            let bestFlux = 0;
-            let bestEnemiesKilled = 0;
-            let bestTotalEnemies = 0;
-            if (saveData.leaderboard && saveData.leaderboard.length > 0) {
-                bestWave = saveData.leaderboard[0].wave;
-                bestFlux = saveData.leaderboard[0].flux;
-                bestEnemiesKilled = saveData.leaderboard[0].enemiesKilled || 0;
-                bestTotalEnemies = saveData.leaderboard[0].totalEnemies || 0;
-            }
-            
-            if (isOfflineMode) {
-                setTimeout(() => {
-                    let emulatedLeaderboard = JSON.parse(localStorage.getItem('neon_emulated_leaderboard') || '[]');
-                    const existingIndex = emulatedLeaderboard.findIndex(entry => entry.name === playerName.toUpperCase());
-                    
-                    const newData = {
-                        name: playerName.toUpperCase(),
-                        wave: bestWave,
-                        flux: bestFlux,
-                        enemiesKilled: bestEnemiesKilled,
-                        totalEnemies: bestTotalEnemies,
-                        lifetimeFlux: saveData.lifetimeFlux || 0,
-                        playtime: saveData.playtime || 0,
-                        bossesDefeated: saveData.bossesDefeated || 0,
-                        maxPerfectWave: saveData.maxPerfectWave || 0,
-                        barricadesBuilt: saveData.barricadesBuilt || 0,
-                        fastestWaveTime: saveData.fastestWaveTime || 9999,
-                        timestamp: Date.now()
-                    };
-                    
-                    if (existingIndex !== -1) emulatedLeaderboard[existingIndex] = newData;
-                    else emulatedLeaderboard.push(newData);
-                    
-                    localStorage.setItem('neon_emulated_leaderboard', JSON.stringify(emulatedLeaderboard));
-                    statusEl.innerText = "RECORD SYNCED LOCALLY!";
-                    statusEl.className = "text-xs text-green-400 font-bold h-4 mb-4";
-                }, 400);
-                return;
-            }
-
-            try {
-                const leaderboardRef = doc(db, 'artifacts', appId, 'public', 'data', 'leaderboard', playerName.toUpperCase());
-                await setDoc(leaderboardRef, {
-                    name: playerName.toUpperCase(),
-                    wave: bestWave,
-                    flux: bestFlux,
-                    enemiesKilled: bestEnemiesKilled,
-                    totalEnemies: bestTotalEnemies,
-                    lifetimeFlux: saveData.lifetimeFlux || 0,
-                    playtime: saveData.playtime || 0,
-                    bossesDefeated: saveData.bossesDefeated || 0,
-                    maxPerfectWave: saveData.maxPerfectWave || 0,
-                    barricadesBuilt: saveData.barricadesBuilt || 0,
-                    fastestWaveTime: saveData.fastestWaveTime || 9999,
-                    timestamp: serverTimestamp()
-                }, { merge: true });
-                
-                statusEl.innerText = "STATS SYNCED TO NETWORK!";
-                statusEl.className = "text-xs text-green-400 font-bold h-4 mb-4";
-            } catch (e) {
-                console.error("Error submitting score:", e);
-                statusEl.innerText = "NETWORK SYNC FAILED";
-                statusEl.className = "text-xs text-red-500 font-bold h-4 mb-4";
-            }
-        }
-
+        
         let currentLeaderboardTab = 'wave';
 
         async function renderLeaderboardUI(tab = currentLeaderboardTab) {
             currentLeaderboardTab = tab;
-            
-            // Update Tab UI Styles
             ['wave', 'flux', 'time', 'boss', 'perfect', 'barricade', 'fastest'].forEach(t => {
                 const el = document.getElementById(`tab-${t}`);
                 if (!el) return;
-                if (t === tab) {
-                    el.className = "text-xs font-bold px-3 py-1 rounded bg-[#0ff] text-black border border-[#0ff] flex-shrink-0";
-                } else {
-                    el.className = "text-xs font-bold px-3 py-1 rounded border border-gray-600 text-gray-400 flex-shrink-0";
-                }
+                if (t === tab) el.className = "text-xs font-bold px-3 py-1 rounded bg-[#0ff] text-black border border-[#0ff] flex-shrink-0";
+                else el.className = "text-xs font-bold px-3 py-1 rounded border border-gray-600 text-gray-400 flex-shrink-0";
             });
 
-            if (!currentUser && !isOfflineMode) {
-                document.getElementById('leaderboard-list').innerHTML = '<div class="text-red-500 italic text-center mt-10 font-bold">Network not ready. Please wait.</div>';
-                return;
-            }
-            const list = document.getElementById('leaderboard-list');
-            list.innerHTML = '<div class="text-gray-500 italic text-center mt-10 font-bold animate-pulse">Syncing with High Scores...</div>';
+            if (!currentUser && !isOfflineMode) { document.getElementById('leaderboard-list').innerHTML = '<div class="text-red-500 italic text-center mt-10 font-bold">Network not ready. Please wait.</div>'; return; }
+            const list = document.getElementById('leaderboard-list'); list.innerHTML = '<div class="text-gray-500 italic text-center mt-10 font-bold animate-pulse">Syncing...</div>';
             
             try {
                 let scores = [];
-
-                if (isOfflineMode) {
-                    scores = JSON.parse(localStorage.getItem('neon_emulated_leaderboard') || '[]');
-                } else {
+                if (isOfflineMode) { scores = JSON.parse(localStorage.getItem('neon_emulated_leaderboard') || '[]'); } 
+                else {
                     const lbCollection = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
                     const snapshot = await getDocs(lbCollection);
-                    snapshot.forEach(doc => {
-                        scores.push(doc.data());
-                    });
+                    snapshot.forEach(doc => { scores.push(doc.data()); });
                 }
 
-                // Client-side sort based on selected tab
-                if (tab === 'wave') {
-                    scores.sort((a, b) => (b.wave - a.wave) || (b.flux - a.flux));
-                } else if (tab === 'flux') {
-                    scores.sort((a, b) => (b.lifetimeFlux || 0) - (a.lifetimeFlux || 0));
-                } else if (tab === 'time') {
-                    scores.sort((a, b) => (b.playtime || 0) - (a.playtime || 0));
-                } else if (tab === 'boss') {
-                    scores.sort((a, b) => (b.bossesDefeated || 0) - (a.bossesDefeated || 0));
-                } else if (tab === 'perfect') {
-                    scores.sort((a, b) => (b.maxPerfectWave || 0) - (a.maxPerfectWave || 0));
-                } else if (tab === 'barricade') {
-                    scores.sort((a, b) => (b.barricadesBuilt || 0) - (a.barricadesBuilt || 0));
-                } else if (tab === 'fastest') {
-                    scores.sort((a, b) => {
-                        let timeA = a.fastestWaveTime || 9999;
-                        let timeB = b.fastestWaveTime || 9999;
-                        return timeA - timeB;
-                    });
-                }
+                if (tab === 'wave') scores.sort((a, b) => (b.wave - a.wave) || (b.flux - a.flux));
+                else if (tab === 'flux') scores.sort((a, b) => (b.lifetimeFlux || 0) - (a.lifetimeFlux || 0));
+                else if (tab === 'time') scores.sort((a, b) => (b.playtime || 0) - (a.playtime || 0));
+                else if (tab === 'boss') scores.sort((a, b) => (b.bossesDefeated || 0) - (a.bossesDefeated || 0));
+                else if (tab === 'perfect') scores.sort((a, b) => (b.maxPerfectWave || 0) - (a.maxPerfectWave || 0));
+                else if (tab === 'barricade') scores.sort((a, b) => (b.barricadesBuilt || 0) - (a.barricadesBuilt || 0));
+                else if (tab === 'fastest') scores.sort((a, b) => (a.fastestWaveTime || 9999) - (b.fastestWaveTime || 9999));
                 
-                // Filter out any older duplicate database entries (1 slot per player)
-                let uniqueScores = [];
-                let seenNames = new Set();
+                let uniqueScores = []; let seenNames = new Set();
                 for (let run of scores) {
                     let name = (run.name || '???').toUpperCase();
-                    if (!seenNames.has(name)) {
-                        seenNames.add(name);
-                        uniqueScores.push(run);
-                    }
+                    if (!seenNames.has(name)) { seenNames.add(name); uniqueScores.push(run); }
                 }
-                scores = uniqueScores;
-                
-                scores = scores.slice(0, 100); // Support top 100
-                
+                scores = uniqueScores.slice(0, 100);
                 list.innerHTML = '';
-                
-                if (scores.length === 0) {
-                    list.innerHTML = '<div class="text-gray-500 italic text-center mt-10 font-bold">No records found. Be the first!</div>';
-                    return;
-                }
+                if (scores.length === 0) { list.innerHTML = '<div class="text-gray-500 italic text-center mt-10 font-bold">No records found.</div>'; return; }
 
                 scores.forEach((run, index) => {
                     const row = document.createElement('div');
                     row.className = 'flex justify-between items-center bg-white/5 p-4 rounded-xl border border-cyan-400/20';
-                    
-                    let rankColor = 'text-white';
-                    if (index === 0) rankColor = 'text-yellow-400 text-shadow-[0_0_10px_#fbbf24]';
-                    else if (index === 1) rankColor = 'text-gray-300';
-                    else if (index === 2) rankColor = 'text-amber-600';
-
-                    let subtitle = '';
-                    let rightSideText = '';
+                    let rankColor = index === 0 ? 'text-yellow-400 text-shadow-[0_0_10px_#fbbf24]' : (index === 1 ? 'text-gray-300' : (index === 2 ? 'text-amber-600' : 'text-white'));
+                    let subtitle = '', rightSideText = '';
                     
                     if (tab === 'wave') {
                         subtitle = `WAVE ${run.wave || 0}`;
-                        
-                        // Calculate fallback total for older scores
-                        let calcTotal = 5;
-                        for (let i = 1; i < (run.wave || 1); i++) calcTotal += ((i * 7) % 5) + 1;
-                        if ((run.wave || 1) % 10 === 0) calcTotal = 1; // Boss wave
-                        
                         let kills = run.enemiesKilled !== undefined ? run.enemiesKilled : "?";
-                        let total = run.totalEnemies || calcTotal;
-                        
+                        let total = run.totalEnemies || "?";
                         rightSideText = `${kills} / ${total}`;
-                    } else if (tab === 'flux') {
-                        subtitle = `LIFETIME EARNINGS`;
-                        rightSideText = `${run.lifetimeFlux || 0} F`;
-                    } else if (tab === 'time') {
-                        subtitle = `TIME IN COMBAT`;
-                        rightSideText = formatTime(run.playtime || 0);
-                    } else if (tab === 'boss') {
-                        subtitle = `BOSSES EXECUTED`;
-                        rightSideText = run.bossesDefeated || 0;
-                    } else if (tab === 'perfect') {
-                        subtitle = `UNBREACHED RUN`;
-                        rightSideText = `WAVE ${run.maxPerfectWave || 0}`;
-                    } else if (tab === 'barricade') {
-                        subtitle = `UNITS BUILT`;
-                        rightSideText = run.barricadesBuilt || 0;
-                    } else if (tab === 'fastest') {
-                        subtitle = `RECORD CLEAR TIME`;
-                        let t = run.fastestWaveTime || 9999;
-                        rightSideText = t === 9999 ? "N/A" : `${t.toFixed(2)}s`;
-                    }
+                    } else if (tab === 'flux') { subtitle = `LIFETIME EARNINGS`; rightSideText = `${run.lifetimeFlux || 0} F`; } 
+                    else if (tab === 'time') { subtitle = `TIME IN COMBAT`; rightSideText = formatTime(run.playtime || 0); } 
+                    else if (tab === 'boss') { subtitle = `BOSSES EXECUTED`; rightSideText = run.bossesDefeated || 0; } 
+                    else if (tab === 'perfect') { subtitle = `UNBREACHED RUN`; rightSideText = `WAVE ${run.maxPerfectWave || 0}`; } 
+                    else if (tab === 'barricade') { subtitle = `UNITS BUILT`; rightSideText = run.barricadesBuilt || 0; } 
+                    else if (tab === 'fastest') { subtitle = `RECORD CLEAR TIME`; let t = run.fastestWaveTime || 9999; rightSideText = t === 9999 ? "N/A" : `${t.toFixed(2)}s`; }
 
                     row.innerHTML = `
                         <div class="flex items-center gap-5">
@@ -1384,486 +1094,261 @@
                     `;
                     list.appendChild(row);
                 });
-            } catch (e) {
-                console.error("Error fetching leaderboard:", e);
-                list.innerHTML = '<div class="text-red-500 italic text-center mt-10 font-bold">Leaderboard connection failed.</div>';
+            } catch (e) { list.innerHTML = '<div class="text-red-500 italic text-center mt-10 font-bold">Connection failed.</div>'; }
+        }
+
+        async function submitGlobalScore() {
+            if (!currentUser && !isOfflineMode) return;
+            const playerName = currentUsername || 'GUEST';
+            const statusEl = document.getElementById('submit-status');
+            statusEl.innerText = "UPLOADING..."; statusEl.className = "text-xs text-yellow-400 font-bold h-4 mb-4 animate-pulse";
+            
+            let bestWave = 0, bestFlux = 0, bestEnemiesKilled = 0, bestTotalEnemies = 0;
+            if (saveData.leaderboard && saveData.leaderboard.length > 0) {
+                bestWave = saveData.leaderboard[0].wave; bestFlux = saveData.leaderboard[0].flux;
+                bestEnemiesKilled = saveData.leaderboard[0].enemiesKilled || 0; bestTotalEnemies = saveData.leaderboard[0].totalEnemies || 0;
             }
+            
+            const payload = {
+                name: playerName.toUpperCase(), wave: bestWave, flux: bestFlux, enemiesKilled: bestEnemiesKilled, totalEnemies: bestTotalEnemies,
+                lifetimeFlux: saveData.lifetimeFlux || 0, playtime: saveData.playtime || 0, bossesDefeated: saveData.bossesDefeated || 0,
+                maxPerfectWave: saveData.maxPerfectWave || 0, barricadesBuilt: saveData.barricadesBuilt || 0, fastestWaveTime: saveData.fastestWaveTime || 9999,
+                timestamp: isOfflineMode ? Date.now() : serverTimestamp()
+            };
+
+            if (isOfflineMode) {
+                setTimeout(() => {
+                    let lb = JSON.parse(localStorage.getItem('neon_emulated_leaderboard') || '[]');
+                    const idx = lb.findIndex(entry => entry.name === playerName.toUpperCase());
+                    if (idx !== -1) lb[idx] = payload; else lb.push(payload);
+                    localStorage.setItem('neon_emulated_leaderboard', JSON.stringify(lb));
+                    statusEl.innerText = "RECORD SYNCED LOCALLY!"; statusEl.className = "text-xs text-green-400 font-bold h-4 mb-4";
+                }, 400); return;
+            }
+
+            try {
+                const lbRef = doc(db, 'artifacts', appId, 'public', 'data', 'leaderboard', playerName.toUpperCase());
+                await setDoc(lbRef, payload, { merge: true });
+                statusEl.innerText = "STATS SYNCED TO NETWORK!"; statusEl.className = "text-xs text-green-400 font-bold h-4 mb-4";
+            } catch (e) { statusEl.innerText = "NETWORK SYNC FAILED"; statusEl.className = "text-xs text-red-500 font-bold h-4 mb-4"; }
+        }
+
+        function toggleModal(id, show) {
+            menu.classList.add('hidden'); gameOverScreen.classList.add('hidden'); shopModal.classList.add('hidden');
+            barricadeShopModal.classList.add('hidden'); pauseMenu.classList.add('hidden'); leaderboardModal.classList.add('hidden');
+            
+            if (id === 'pause-menu') pauseMenu.classList.remove('hidden');
+            else if (id === 'menu') { currentBaseScreen = 'menu'; menu.classList.remove('hidden'); } 
+            else if (id === 'game-over') { currentBaseScreen = 'game-over'; gameOverScreen.classList.remove('hidden'); } 
+            else if (show && id) { document.getElementById(id).classList.remove('hidden'); if (id === 'leaderboard-modal') renderLeaderboardUI(); } 
+            else if (id !== 'none') {
+                if (currentBaseScreen === 'game-over') gameOverScreen.classList.remove('hidden'); else menu.classList.remove('hidden');
+            }
+            updateUI();
         }
 
         function buyUpgrade(type) {
-            const up = saveData.upgrades;
-            let cost = 0;
-            let max = 5;
+            const up = saveData.upgrades; let cost = 0; let max = 5;
             if (type === 'width') cost = up.width * 15;
             if (type === 'speed') cost = up.speed * 25;
-            if (type === 'multi') { 
-                cost = (up.multi === 1) ? 750 : 2000; 
-                max = 3; 
-            }
+            if (type === 'multi') { cost = (up.multi === 1) ? 750 : 2000; max = 3; }
             if (type === 'health') { cost = (up.health + 1) * 75; max = 5; }
             
-            if (up[type] < max && saveData.flux >= cost) {
-                saveData.flux -= cost;
-                up[type]++;
-                saveGame();
-            }
+            if (up[type] < max && saveData.flux >= cost) { saveData.flux -= cost; up[type]++; saveGame(); }
         }
 
         function buyBarricade() {
             const cost = 5 + (saveData.barricadeTotal * 5);
             if (saveData.barricadeTotal < 10 && saveData.flux >= cost) {
-                saveData.flux -= cost;
-                saveData.barricadeTotal++;
-                saveData.barricadesBuilt = (saveData.barricadesBuilt || 0) + 1;
-                saveGame();
-            }
-        }
-
-        function setupBarricades() {
-            barricadeUnits = [];
-            let attempts = 0;
-            const minDistanceBetween = 55; 
-
-            while (barricadeUnits.length < saveData.barricadeTotal && attempts < 1000) {
-                attempts++;
-                const angle = Math.random() * Math.PI * 2;
-                const dist = BARRICADE_BASE_RADIUS + (Math.random() * 140 - 70);
-                const bx = centerX + Math.cos(angle) * dist;
-                const by = centerY + Math.sin(angle) * dist;
-
-                let tooClose = false;
-                for (let b of barricadeUnits) {
-                    const existingX = centerX + Math.cos(b.angle) * b.dist;
-                    const existingY = centerY + Math.sin(b.angle) * b.dist;
-                    const d = Math.sqrt((bx - existingX)**2 + (by - existingY)**2);
-                    if (d < minDistanceBetween) {
-                        tooClose = true;
-                        break;
-                    }
-                }
-
-                if (!tooClose) {
-                    barricadeUnits.push({
-                        angle: angle,
-                        dist: dist,
-                        active: true,
-                        size: 22 
-                    });
-                }
+                saveData.flux -= cost; saveData.barricadeTotal++; saveData.barricadesBuilt = (saveData.barricadesBuilt || 0) + 1; saveGame();
             }
         }
 
         function startGame(fullHeal = false) {
-            currentRunFlux = 0;
-            gameActive = true;
-            isPaused = false;
-            rotation = 0;
-            rotationDir = 1;
-            enemies = [];
-            particles = [];
-            floatingTexts = [];
-            currentWaveTime = 0;
-            hasTakenDamageThisWave = false;
+            currentRunFlux = 0; gameActive = true; isPaused = false; rotation = 0; rotationDir = 1;
+            enemies = []; bosses = []; particles = []; floatingTexts = []; currentWaveTime = 0; hasTakenDamageThisWave = false;
             
             isBossWave = (saveData.currentWave % 10 === 0);
-            bosses = [];
-
             if (isBossWave) {
-                totalEnemiesToDestroy = 1;
-                bosses.push(new Boss());
-                waveProgress.innerText = "WARNING: CORE THREAT DETECTED";
-                waveProgress.style.color = "#ff00ff";
+                totalEnemiesToDestroy = 1; bosses.push(new Boss());
+                waveProgress.innerText = "WARNING: CORE THREAT DETECTED"; waveProgress.style.color = "#ff00ff";
+                playSound('boss');
             } else {
-                waveProgress.style.color = "#999";
-                totalEnemiesToDestroy = 5;
-                for (let i = 1; i < saveData.currentWave; i++) {
-                    totalEnemiesToDestroy += ((i * 7) % 5) + 1; 
-                }
-                enemiesDestroyedInWave = 0;
-                waveProgress.innerText = `DESTROYED: 0 / ${totalEnemiesToDestroy}`;
+                waveProgress.style.color = "#999"; totalEnemiesToDestroy = 5;
+                for (let i = 1; i < saveData.currentWave; i++) totalEnemiesToDestroy += ((i * 7) % 5) + 1; 
+                enemiesDestroyedInWave = 0; waveProgress.innerText = `DESTROYED: 0 / ${totalEnemiesToDestroy}`;
             }
 
             difficulty = 1 + (saveData.currentWave - 1) * 0.12;
-            
             maxHealth = 5 + saveData.upgrades.health;
-            if (fullHeal) currentHealth = maxHealth;
+            if (fullHeal) { currentHealth = maxHealth; empCharge = 0; updateEMPUI(); }
             
             setupBarricades();
+            toggleModal('none', false); pauseBtn.classList.remove('hidden');
+            scoreEl.innerText = '0'; waveDisplay.innerText = `WAVE ${saveData.currentWave}`;
             
-            toggleModal('none', false);
-            pauseBtn.classList.remove('hidden');
-            scoreEl.innerText = '0';
-            waveDisplay.innerText = `WAVE ${saveData.currentWave}`;
-            
-            if (saveData.barricadeTotal > 0) {
-                barricadeIndicator.classList.remove('hidden');
-                activeBarricadeCountEl.innerText = barricadeUnits.filter(b => b.active).length;
-            } else {
-                barricadeIndicator.classList.add('hidden');
-            }
-            
+            if (saveData.barricadeTotal > 0) { barricadeIndicator.classList.remove('hidden'); activeBarricadeCountEl.innerText = barricadeUnits.filter(b => b.active).length; } 
+            else { barricadeIndicator.classList.add('hidden'); }
             renderHealth();
         }
 
+        function setupBarricades() {
+            barricadeUnits = []; let attempts = 0; const minDistanceBetween = 55; 
+            while (barricadeUnits.length < saveData.barricadeTotal && attempts < 1000) {
+                attempts++;
+                const angle = Math.random() * Math.PI * 2;
+                const dist = BARRICADE_BASE_RADIUS + (Math.random() * 140 - 70);
+                const bx = centerX + Math.cos(angle) * dist; const by = centerY + Math.sin(angle) * dist;
+                let tooClose = false;
+                for (let b of barricadeUnits) {
+                    const ex = centerX + Math.cos(b.angle) * b.dist; const ey = centerY + Math.sin(b.angle) * b.dist;
+                    if (Math.sqrt((bx - ex)**2 + (by - ey)**2) < minDistanceBetween) { tooClose = true; break; }
+                }
+                if (!tooClose) barricadeUnits.push({ angle: angle, dist: dist, active: true, size: 22 });
+            }
+        }
+
         function onWaveClear() {
-            gameActive = false;
-            pauseBtn.classList.add('hidden');
-            saveData.flux += currentRunFlux;
+            gameActive = false; pauseBtn.classList.add('hidden'); saveData.flux += currentRunFlux;
+            if (!hasTakenDamageThisWave) saveData.maxPerfectWave = Math.max(saveData.maxPerfectWave || 0, saveData.currentWave);
+            if (!isBossWave && currentWaveTime > 0) saveData.fastestWaveTime = Math.min(saveData.fastestWaveTime || 9999, currentWaveTime);
             
-            // Evaluate Trackers for new Leaderboards
-            if (!hasTakenDamageThisWave) {
-                saveData.maxPerfectWave = Math.max(saveData.maxPerfectWave || 0, saveData.currentWave);
-            }
-            if (!isBossWave && currentWaveTime > 0) {
-                saveData.fastestWaveTime = Math.min(saveData.fastestWaveTime || 9999, currentWaveTime);
-            }
-            
-            currentHealth = Math.min(currentHealth + 1, maxHealth);
-            saveData.currentWave++;
-            saveGame();
-            waveMsg.innerText = `WAVE ${saveData.currentWave - 1} SECURED`;
-            waveMsg.classList.add('show');
-            setTimeout(() => {
-                waveMsg.classList.remove('show');
-                if (saveData.currentWave > 0) startGame(false); 
-            }, 1200);
+            currentHealth = Math.min(currentHealth + 1, maxHealth); saveData.currentWave++; saveGame();
+            waveMsg.innerText = `WAVE ${saveData.currentWave - 1} SECURED`; waveMsg.classList.add('show');
+            setTimeout(() => { waveMsg.classList.remove('show'); if (saveData.currentWave > 0) startGame(false); }, 1200);
         }
 
         function endGame() {
-            gameActive = false;
-            isPaused = false;
-            pauseBtn.classList.add('hidden');
-            enemies.length = 0;
-            bosses.length = 0;
-            particles.length = 0;
-            floatingTexts.length = 0;
+            gameActive = false; isPaused = false; pauseBtn.classList.add('hidden');
+            enemies.length = 0; bosses.length = 0; particles.length = 0; floatingTexts.length = 0;
             saveData.flux += currentRunFlux;
             
-            const runWave = saveData.currentWave;
-            const runFlux = currentRunFlux;
+            const runWave = saveData.currentWave; const runFlux = currentRunFlux;
+            let bestWave = 0, bestFlux = 0;
+            if (saveData.leaderboard && saveData.leaderboard.length > 0) { bestWave = saveData.leaderboard[0].wave; bestFlux = saveData.leaderboard[0].flux; }
+            let isImprovement = (runWave > bestWave) || (runWave === bestWave && runFlux > bestFlux);
             
-            // --- Save to Leaderboard ---
-            saveData.leaderboard.push({
-                wave: runWave,
-                flux: runFlux,
-                enemiesKilled: enemiesDestroyedInWave,
-                totalEnemies: totalEnemiesToDestroy,
-                date: new Date().toLocaleDateString()
-            });
-            saveData.leaderboard.sort((a, b) => b.wave - a.wave || b.flux - a.flux);
-            saveData.leaderboard = saveData.leaderboard.slice(0, 10);
+            saveData.leaderboard.push({ wave: runWave, flux: runFlux, enemiesKilled: enemiesDestroyedInWave, totalEnemies: totalEnemiesToDestroy, date: new Date().toLocaleDateString() });
+            saveData.leaderboard.sort((a, b) => b.wave - a.wave || b.flux - a.flux); saveData.leaderboard = saveData.leaderboard.slice(0, 10);
             
-            saveData.currentWave = Math.max(1, saveData.currentWave - 1);
-            saveGame();
-            finalScoreEl.innerText = runFlux;
-            document.getElementById('restart-wave-num').innerText = saveData.currentWave;
-            barricadeIndicator.classList.add('hidden');
+            saveData.currentWave = Math.max(1, saveData.currentWave - 1); saveGame();
+            finalScoreEl.innerText = runFlux; document.getElementById('restart-wave-num').innerText = saveData.currentWave; barricadeIndicator.classList.add('hidden');
             
-            // ALWAYS upload so playtime and lifetime flux stay synced
-            submitGlobalScore();
+            scoreEl.innerText = '0'; waveDisplay.innerText = `WAVE ${saveData.currentWave}`; waveProgress.innerText = `SYSTEM STANDBY`;
             
-            toggleModal('game-over', true);
-            shakeAmount = 40;
+            const statusEl = document.getElementById('submit-status');
+            if (isImprovement) submitGlobalScore();
+            else { statusEl.innerText = "RUN COMPLETED. LOCAL DATA SAVED."; statusEl.className = "text-xs text-gray-500 font-bold h-4 mb-4"; }
+            
+            toggleModal('game-over', true); shakeAmount = 40;
         }
 
         class FloatingText {
-            constructor(x, y, text, color) {
-                this.x = x;
-                this.y = y;
-                this.text = text;
-                this.color = color;
-                this.life = 1.0;
-                this.vy = -1.5;
-            }
-            update() {
-                this.y += this.vy;
-                this.life -= 0.02;
-                return this.life > 0;
-            }
-            draw() {
-                ctx.globalAlpha = this.life;
-                ctx.fillStyle = this.color;
-                ctx.font = "900 20px 'Segoe UI'";
-                ctx.textAlign = "center";
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = this.color;
-                ctx.fillText(this.text, this.x, this.y);
-                ctx.shadowBlur = 0;
-                ctx.globalAlpha = 1.0;
-            }
+            constructor(x, y, text, color) { this.x = x; this.y = y; this.text = text; this.color = color; this.life = 1.0; this.vy = -1.5; }
+            update() { this.y += this.vy; this.life -= 0.02; return this.life > 0; }
+            draw() { ctx.globalAlpha = this.life; ctx.fillStyle = this.color; ctx.font = "900 20px 'Segoe UI'"; ctx.textAlign = "center"; ctx.shadowBlur = 10; ctx.shadowColor = this.color; ctx.fillText(this.text, this.x, this.y); ctx.shadowBlur = 0; ctx.globalAlpha = 1.0; }
         }
 
         class Boss {
             constructor() {
-                this.angle = Math.random() * Math.PI * 2;
-                this.orbitDist = 180 + (saveData.upgrades.width * 10); 
-                this.dist = Math.max(width, height) * 0.8; 
-                
-                this.x = centerX + Math.cos(this.angle) * this.dist;
-                this.y = centerY + Math.sin(this.angle) * this.dist;
-                
-                let tier = Math.floor((saveData.currentWave) / 10);
-                if (tier > 10) { tier = Math.floor(Math.random() * 10) + 1; }
-                this.tier = tier;
-
-                this.sides = 2 + tier;
-                if (this.tier === 10) this.sides = 16; 
-
-                this.maxHp = 8 + (tier * 4) + Math.floor(saveData.currentWave * 0.5);
-                this.hp = this.maxHp;
-                
+                this.angle = Math.random() * Math.PI * 2; this.orbitDist = 180 + (saveData.upgrades.width * 10); this.dist = Math.max(width, height) * 0.8; 
+                this.x = centerX + Math.cos(this.angle) * this.dist; this.y = centerY + Math.sin(this.angle) * this.dist;
+                let tier = Math.floor((saveData.currentWave) / 10); if (tier > 10) tier = Math.floor(Math.random() * 10) + 1;
+                this.tier = tier; this.sides = 2 + tier; if (this.tier === 10) this.sides = 16; 
+                this.maxHp = 8 + (tier * 4) + Math.floor(saveData.currentWave * 0.5); this.hp = this.maxHp;
                 this.speedMult = 1 + (tier * 0.1);
-                
                 const colors = ['#ff00ff', '#00ffcc', '#ffff00', '#ff5500', '#ff0055', '#a020f0', '#ff9900', '#00ff00', '#0000ff', '#ff0000'];
-                this.color = colors[(tier - 1) % colors.length];
-                
-                if (this.tier === 10) this.color = '#8b0000';
-                
-                this.size = 35 + (tier * 2);
-                
-                this.state = 'entering'; 
-                this.actionTimer = 0;
-                this.isImmortal = false;
+                this.color = colors[(tier - 1) % colors.length]; if (this.tier === 10) this.color = '#8b0000';
+                this.size = 35 + (tier * 2); this.state = 'entering'; this.actionTimer = 0; this.isImmortal = false;
             }
-
             update() {
-                const dx = centerX - this.x;
-                const dy = centerY - this.y;
-                const dist = Math.sqrt(dx*dx + dy*dy);
-                
+                const dx = centerX - this.x; const dy = centerY - this.y; const dist = Math.sqrt(dx*dx + dy*dy);
                 if (this.state === 'entering') {
-                    this.x += (dx / dist) * 3;
-                    this.y += (dy / dist) * 3;
-                    if (dist <= this.orbitDist) {
-                        this.state = 'orbiting';
-                        this.angle = Math.atan2(this.y - centerY, this.x - centerX);
-                    }
-                } 
-                else if (this.state === 'orbiting') {
-                    this.angle += (0.015 * difficulty * this.speedMult);
-                    this.x = centerX + Math.cos(this.angle) * this.orbitDist;
-                    this.y = centerY + Math.sin(this.angle) * this.orbitDist;
-                    
-                    this.actionTimer++;
-                    
-                    let fireRate = Math.max(20, 100 - (this.tier * 8)); 
-                    if (this.tier === 10) fireRate = 15; 
-
+                    this.x += (dx / dist) * 3; this.y += (dy / dist) * 3;
+                    if (dist <= this.orbitDist) { this.state = 'orbiting'; this.angle = Math.atan2(this.y - centerY, this.x - centerX); }
+                } else if (this.state === 'orbiting') {
+                    this.angle += (0.015 * difficulty * this.speedMult); this.x = centerX + Math.cos(this.angle) * this.orbitDist; this.y = centerY + Math.sin(this.angle) * this.orbitDist;
+                    this.actionTimer++; let fireRate = Math.max(20, 100 - (this.tier * 8)); if (this.tier === 10) fireRate = 15; 
                     if (this.actionTimer % fireRate === 0) {
-                        let proj = new Enemy(); 
-                        proj.x = this.x; proj.y = this.y; 
-                        
-                        if (this.tier % 2 === 0 || this.tier === 10) {
-                            proj.type = 'bouncer';
-                            proj.hp = 2;
-                        } else {
-                            proj.type = 'stinger';
-                            proj.hp = 1;
-                        }
-                        
-                        proj.color = this.color; 
-                        enemies.push(proj);
+                        let proj = new Enemy(); proj.x = this.x; proj.y = this.y; 
+                        if (this.tier % 2 === 0 || this.tier === 10) { proj.type = 'bouncer'; proj.hp = 2; } else { proj.type = 'stinger'; proj.hp = 1; }
+                        proj.color = this.color; enemies.push(proj);
                     }
-                    
-                    if (this.actionTimer > 300 - (this.tier * 10)) {
-                        this.state = 'charging';
-                        this.actionTimer = 0;
-                    }
-                } 
-                else if (this.state === 'charging') {
-                    this.x += (dx / dist) * (5 * difficulty * this.speedMult);
-                    this.y += (dy / dist) * (5 * difficulty * this.speedMult);
-                }
-                else if (this.state === 'rebounding') {
-                    this.x -= (dx / dist) * 8;
-                    this.y -= (dy / dist) * 8;
-                    if (dist >= this.orbitDist) {
-                        this.state = 'orbiting';
-                        this.angle = Math.atan2(this.y - centerY, this.x - centerX);
-                        this.isImmortal = false;
-                    }
+                    if (this.actionTimer > 300 - (this.tier * 10)) { this.state = 'charging'; this.actionTimer = 0; }
+                } else if (this.state === 'charging') {
+                    this.x += (dx / dist) * (5 * difficulty * this.speedMult); this.y += (dy / dist) * (5 * difficulty * this.speedMult);
+                } else if (this.state === 'rebounding') {
+                    this.x -= (dx / dist) * 8; this.y -= (dy / dist) * 8;
+                    if (dist >= this.orbitDist) { this.state = 'orbiting'; this.angle = Math.atan2(this.y - centerY, this.x - centerX); this.isImmortal = false; }
                 }
                 
                 if (!this.isImmortal && dist < SHIELD_RADIUS + this.size/2 + 10) {
                     const currentAngle = Math.atan2(this.y - centerY, this.x - centerX);
                     const normalizedEnemyAngle = ((currentAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-                    const arcWidth = 0.7 + (saveData.upgrades.width - 1) * 0.15; 
-                    const shieldCount = saveData.upgrades.multi;
-                    
+                    const arcWidth = 0.7 + (saveData.upgrades.width - 1) * 0.15; const shieldCount = saveData.upgrades.multi;
                     let hitShield = false;
                     for (let i = 0; i < shieldCount; i++) {
-                        const offset = (Math.PI * 2 / shieldCount) * i;
-                        const normalizedRotation = (((rotation + offset) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-                        let angleDiff = Math.abs(normalizedEnemyAngle - normalizedRotation);
-                        if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
-                        
+                        const offset = (Math.PI * 2 / shieldCount) * i; const normalizedRotation = (((rotation + offset) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+                        let angleDiff = Math.abs(normalizedEnemyAngle - normalizedRotation); if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
                         if (angleDiff < arcWidth / 2) hitShield = true;
                     }
-                    
                     if (hitShield) {
-                        this.hp--;
-                        this.state = 'rebounding';
-                        this.isImmortal = true;
-                        createExplosion(this.x, this.y, this.color, 30);
-                        shakeAmount = 15;
-                        
+                        this.hp--; this.state = 'rebounding'; this.isImmortal = true; createExplosion(this.x, this.y, this.color, 30); shakeAmount = 15;
+                        playSound('hit');
                         if (this.hp <= 0) {
-                            saveData.bossesDefeated = (saveData.bossesDefeated || 0) + 1;
-                            const reward = 100 + (this.tier * 50);
-                            currentRunFlux += reward; 
-                            saveData.lifetimeFlux += reward;
-                            scoreEl.innerText = currentRunFlux;
-                            floatingTexts.push(new FloatingText(this.x, this.y, `+${reward} F`, '#fbbf24'));
-                            createExplosion(this.x, this.y, this.color, 100);
-                            shakeAmount = 40;
+                            saveData.bossesDefeated = (saveData.bossesDefeated || 0) + 1; const reward = 100 + (this.tier * 50); currentRunFlux += reward; saveData.lifetimeFlux += reward; scoreEl.innerText = currentRunFlux;
+                            floatingTexts.push(new FloatingText(this.x, this.y, `+${reward} F`, '#fbbf24')); createExplosion(this.x, this.y, this.color, 100); shakeAmount = 40; playSound('ping');
                             return false; 
                         }
                         return true;
                     }
                 }
-                
                 if (dist < 25) {
-                    currentHealth -= 2; 
-                    shakeAmount = 30;
-                    hasTakenDamageThisWave = true;
-                    floatingTexts.push(new FloatingText(centerX, centerY - 40, "-2", "#ff0055"));
-                    createExplosion(this.x, this.y, '#f0f', 40);
-                    renderHealth();
-                    this.state = 'rebounding';
-                    this.isImmortal = true;
-                    if (currentHealth <= 0 && gameActive) endGame();
+                    currentHealth -= 2; shakeAmount = 30; hasTakenDamageThisWave = true; playSound('damage');
+                    floatingTexts.push(new FloatingText(centerX, centerY - 40, "-2", "#ff0055")); createExplosion(this.x, this.y, '#f0f', 40); renderHealth();
+                    this.state = 'rebounding'; this.isImmortal = true; if (currentHealth <= 0 && gameActive) endGame();
                 }
-                
                 return true;
             }
-
             draw() {
-                ctx.fillStyle = this.color;
-                ctx.shadowBlur = 20;
-                ctx.shadowColor = this.color;
-                
-                ctx.save();
-                ctx.translate(this.x, this.y);
-                ctx.rotate(Date.now() * 0.002);
-                ctx.beginPath();
-                for (let i = 0; i < this.sides; i++) {
-                    const angle = (i * Math.PI * 2) / this.sides;
-                    const px = Math.cos(angle) * this.size;
-                    const py = Math.sin(angle) * this.size;
-                    if (i === 0) ctx.moveTo(px, py);
-                    else ctx.lineTo(px, py);
-                }
-                ctx.closePath();
-                ctx.fill();
-                
-                if (this.state === 'charging') {
-                    ctx.fillStyle = '#fff';
-                    ctx.beginPath();
-                    ctx.arc(0, 0, this.size * 0.4, 0, Math.PI * 2);
-                    ctx.fill();
-                }
+                ctx.fillStyle = this.color; ctx.shadowBlur = 20; ctx.shadowColor = this.color; ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(Date.now() * 0.002); ctx.beginPath();
+                for (let i = 0; i < this.sides; i++) { const angle = (i * Math.PI * 2) / this.sides; const px = Math.cos(angle) * this.size; const py = Math.sin(angle) * this.size; if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); }
+                ctx.closePath(); ctx.fill();
+                if (this.state === 'charging') { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, this.size * 0.4, 0, Math.PI * 2); ctx.fill(); }
                 ctx.restore();
-                
-                const barWidth = 60;
-                ctx.fillStyle = 'rgba(255, 0, 85, 0.3)';
-                ctx.fillRect(this.x - barWidth/2, this.y - this.size - 15, barWidth, 6);
-                ctx.fillStyle = '#0ff';
-                ctx.fillRect(this.x - barWidth/2, this.y - this.size - 15, barWidth * (this.hp / this.maxHp), 6);
-                
-                ctx.shadowBlur = 0;
+                const barWidth = 60; ctx.fillStyle = 'rgba(255, 0, 85, 0.3)'; ctx.fillRect(this.x - barWidth/2, this.y - this.size - 15, barWidth, 6);
+                ctx.fillStyle = '#0ff'; ctx.fillRect(this.x - barWidth/2, this.y - this.size - 15, barWidth * (this.hp / this.maxHp), 6); ctx.shadowBlur = 0;
             }
         }
 
         class Enemy {
             constructor() {
-                const angle = Math.random() * Math.PI * 2;
-                const distance = Math.max(width, height) * 0.7;
-                this.x = centerX + Math.cos(angle) * distance;
-                this.y = centerY + Math.sin(angle) * distance;
-                this.trail = []; 
-                
-                const stingerChance = Math.min(0.4, (saveData.currentWave - 1) * 0.08);
-                const bouncerChance = Math.min(0.3, Math.max(0, (saveData.currentWave - 2) * 0.12));
-                
+                const angle = Math.random() * Math.PI * 2; const distance = Math.max(width, height) * 0.7; this.x = centerX + Math.cos(angle) * distance; this.y = centerY + Math.sin(angle) * distance; this.trail = []; 
+                const stingerChance = Math.min(0.4, (saveData.currentWave - 1) * 0.08); const bouncerChance = Math.min(0.3, Math.max(0, (saveData.currentWave - 2) * 0.12));
                 const rand = Math.random();
-                if (rand < bouncerChance) {
-                    this.type = 'bouncer';
-                    this.hp = 2;
-                    this.state = 'attacking';
-                    this.reboundTicks = 0;
-                    this.color = '#00ffff';
-                    this.speed = 2.2 * difficulty;
-                    this.size = 14;
-                    this.isImmortal = false;
-                } else if (rand < bouncerChance + stingerChance) {
-                    this.type = 'stinger';
-                    this.color = '#ffff00';
-                    this.speed = 4.5 * difficulty;
-                    this.size = 9;
-                    this.hp = 1;
-                } else {
-                    this.type = 'normal';
-                    this.color = '#ff0055';
-                    this.speed = 3.0 * difficulty; 
-                    this.size = 12;
-                    this.hp = 1;
-                }
+                if (rand < bouncerChance) { this.type = 'bouncer'; this.hp = 2; this.state = 'attacking'; this.reboundTicks = 0; this.color = '#00ffff'; this.speed = 2.2 * difficulty; this.size = 14; this.isImmortal = false; } 
+                else if (rand < bouncerChance + stingerChance) { this.type = 'stinger'; this.color = '#ffff00'; this.speed = 4.5 * difficulty; this.size = 9; this.hp = 1; } 
+                else { this.type = 'normal'; this.color = '#ff0055'; this.speed = 3.0 * difficulty; this.size = 12; this.hp = 1; }
             }
-
             update() {
-                this.trail.push({ x: this.x, y: this.y });
-                if (this.trail.length > 6) {
-                    this.trail.shift();
-                }
-
-                const dx = centerX - this.x;
-                const dy = centerY - this.y;
-                const dist = Math.sqrt(dx*dx + dy*dy);
-
+                this.trail.push({ x: this.x, y: this.y }); if (this.trail.length > 6) this.trail.shift();
+                const dx = centerX - this.x; const dy = centerY - this.y; const dist = Math.sqrt(dx*dx + dy*dy);
                 if (this.type === 'bouncer' && this.state === 'rebounding') {
-                    const maxScreenDist = Math.min(width, height) * 0.48;
-                    if (dist < maxScreenDist) {
-                        this.x -= (dx / dist) * this.speed * 2.5; 
-                        this.y -= (dy / dist) * this.speed * 2.5;
-                    }
-                    this.reboundTicks--;
-                    if (this.reboundTicks <= 0) {
-                        this.state = 'attacking';
-                        this.isImmortal = false;
-                    }
+                    const maxScreenDist = Math.min(width, height) * 0.48; if (dist < maxScreenDist) { this.x -= (dx / dist) * this.speed * 2.5; this.y -= (dy / dist) * this.speed * 2.5; }
+                    this.reboundTicks--; if (this.reboundTicks <= 0) { this.state = 'attacking'; this.isImmortal = false; }
                     return true;
-                } else {
-                    this.x += (dx / dist) * this.speed;
-                    this.y += (dy / dist) * this.speed;
-                }
+                } else { this.x += (dx / dist) * this.speed; this.y += (dy / dist) * this.speed; }
 
                 if (!this.isImmortal) {
                     for(let b of barricadeUnits) {
                         if (b.active) {
-                            const bx = centerX + Math.cos(b.angle) * b.dist;
-                            const by = centerY + Math.sin(b.angle) * b.dist;
-                            const dToB = Math.sqrt((this.x - bx)**2 + (this.y - by)**2);
-                            if (dToB < 25) {
-                                if (this.type === 'bouncer' && this.hp > 1) {
-                                    this.hp = 1;
-                                    this.state = 'rebounding';
-                                    this.isImmortal = true;
-                                    this.reboundTicks = 60; 
-                                    b.active = false; 
-                                    activeBarricadeCountEl.innerText = barricadeUnits.filter(u => u.active).length;
-                                    createExplosion(this.x, this.y, '#fff', 12);
-                                    shakeAmount = 10;
-                                    return true; 
-                                } else {
-                                    b.active = false;
-                                    activeBarricadeCountEl.innerText = barricadeUnits.filter(u => u.active).length;
-                                    shakeAmount = 12;
-                                    createExplosion(this.x, this.y, '#fff', 18);
-                                    
-                                    if (!isBossWave) {
-                                        enemiesDestroyedInWave++;
-                                        waveProgress.innerText = `DESTROYED: ${enemiesDestroyedInWave} / ${totalEnemiesToDestroy}`;
-                                    }
+                            const bx = centerX + Math.cos(b.angle) * b.dist; const by = centerY + Math.sin(b.angle) * b.dist;
+                            if (Math.sqrt((this.x - bx)**2 + (this.y - by)**2) < 25) {
+                                playSound('hit');
+                                if (this.type === 'bouncer' && this.hp > 1) { this.hp = 1; this.state = 'rebounding'; this.isImmortal = true; this.reboundTicks = 60; b.active = false; activeBarricadeCountEl.innerText = barricadeUnits.filter(u => u.active).length; createExplosion(this.x, this.y, '#fff', 12); shakeAmount = 10; return true; } 
+                                else {
+                                    b.active = false; activeBarricadeCountEl.innerText = barricadeUnits.filter(u => u.active).length; shakeAmount = 12; createExplosion(this.x, this.y, '#fff', 18);
+                                    if (!isBossWave) { enemiesDestroyedInWave++; waveProgress.innerText = `DESTROYED: ${enemiesDestroyedInWave} / ${totalEnemiesToDestroy}`; addEMPCharge(5); }
                                     return false;
                                 }
                             }
@@ -1872,39 +1357,21 @@
                 }
 
                 if (!this.isImmortal) {
-                    const currentAngle = Math.atan2(this.y - centerY, this.x - centerX);
-                    const normalizedEnemyAngle = ((currentAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-                    const arcWidth = 0.7 + (saveData.upgrades.width - 1) * 0.15; 
-                    const shieldCount = saveData.upgrades.multi;
-
+                    const currentAngle = Math.atan2(this.y - centerY, this.x - centerX); const normalizedEnemyAngle = ((currentAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+                    const arcWidth = 0.7 + (saveData.upgrades.width - 1) * 0.15; const shieldCount = saveData.upgrades.multi;
                     if (dist < SHIELD_RADIUS + 15 && dist > SHIELD_RADIUS - 15) {
                         for (let i = 0; i < shieldCount; i++) {
-                            const offset = (Math.PI * 2 / shieldCount) * i;
-                            const normalizedRotation = (((rotation + offset) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-                            let angleDiff = Math.abs(normalizedEnemyAngle - normalizedRotation);
-                            if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
+                            const offset = (Math.PI * 2 / shieldCount) * i; const normalizedRotation = (((rotation + offset) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+                            let angleDiff = Math.abs(normalizedEnemyAngle - normalizedRotation); if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
                             if (angleDiff < arcWidth / 2) {
-                                if (this.type === 'bouncer' && this.hp > 1) {
-                                    this.hp = 1;
-                                    this.state = 'rebounding';
-                                    this.isImmortal = true;
-                                    this.reboundTicks = 60;
-                                    createExplosion(this.x, this.y, this.color, 12);
-                                    shakeAmount = 6;
-                                    return true;
-                                } else {
+                                playSound('hit');
+                                if (this.type === 'bouncer' && this.hp > 1) { this.hp = 1; this.state = 'rebounding'; this.isImmortal = true; this.reboundTicks = 60; createExplosion(this.x, this.y, this.color, 12); shakeAmount = 6; return true; } 
+                                else {
+                                    playSound('ping');
                                     const points = this.type === 'stinger' ? 2 : (this.type === 'bouncer' ? 3 : 1);
-                                    currentRunFlux += points;
-                                    saveData.lifetimeFlux += points;
-                                    scoreEl.innerText = currentRunFlux;
-                                    floatingTexts.push(new FloatingText(this.x, this.y, `+${points} F`, '#fbbf24'));
-                                    createExplosion(this.x, this.y, this.color, 15);
-                                    shakeAmount = 5;
-                                    
-                                    if (!isBossWave) {
-                                        enemiesDestroyedInWave++;
-                                        waveProgress.innerText = `DESTROYED: ${enemiesDestroyedInWave} / ${totalEnemiesToDestroy}`;
-                                    }
+                                    currentRunFlux += points; saveData.lifetimeFlux += points; scoreEl.innerText = currentRunFlux;
+                                    floatingTexts.push(new FloatingText(this.x, this.y, `+${points} F`, '#fbbf24')); createExplosion(this.x, this.y, this.color, 15); shakeAmount = 5;
+                                    if (!isBossWave) { enemiesDestroyedInWave++; waveProgress.innerText = `DESTROYED: ${enemiesDestroyedInWave} / ${totalEnemiesToDestroy}`; addEMPCharge(5); }
                                     return false;
                                 }
                             }
@@ -1913,193 +1380,99 @@
                 }
 
                 if (dist < 20) {
-                    currentHealth--;
-                    shakeAmount = 25;
-                    hasTakenDamageThisWave = true;
-                    floatingTexts.push(new FloatingText(centerX, centerY - 30, "-1", "#ff0055"));
-                    createExplosion(this.x, this.y, '#ff0055', 20);
-                    renderHealth();
-                    if (currentHealth <= 0 && gameActive) endGame();
-                    return false;
+                    currentHealth--; shakeAmount = 25; hasTakenDamageThisWave = true; playSound('damage');
+                    floatingTexts.push(new FloatingText(centerX, centerY - 30, "-1", "#ff0055")); createExplosion(this.x, this.y, '#ff0055', 20);
+                    renderHealth(); if (currentHealth <= 0 && gameActive) endGame(); return false;
                 }
                 return true;
             }
-
             draw() {
-                if (this.type === 'stinger' || this.type === 'bouncer') {
-                    this.trail.forEach((pos, index) => {
-                        ctx.globalAlpha = (index / this.trail.length) * 0.4;
-                        ctx.fillStyle = this.color;
-                        ctx.beginPath();
-                        ctx.arc(pos.x, pos.y, this.size * 0.6, 0, Math.PI * 2);
-                        ctx.fill();
-                    });
-                    ctx.globalAlpha = 1.0;
-                }
-
-                ctx.fillStyle = this.color;
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = this.color;
-                ctx.beginPath();
-                if (this.type === 'stinger') {
-                    const angle = Math.atan2(centerY - this.y, centerX - this.x);
-                    ctx.save();
-                    ctx.translate(this.x, this.y);
-                    ctx.rotate(angle);
-                    ctx.moveTo(10, 0); ctx.lineTo(-6, 6); ctx.lineTo(-6, -6);
-                    ctx.closePath(); ctx.fill(); ctx.restore();
-                } else if (this.type === 'bouncer') {
-                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                    ctx.fill();
-                    if (this.isImmortal) {
-                        ctx.strokeStyle = "#fff";
-                        ctx.lineWidth = 3;
-                        ctx.beginPath();
-                        ctx.arc(this.x, this.y, this.size + 4, 0, Math.PI * 2);
-                        ctx.stroke();
-                    }
-                    if (this.hp > 1) {
-                        ctx.fillStyle = "#fff";
-                        ctx.beginPath();
-                        ctx.arc(this.x, this.y, this.size/2.5, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                } else {
-                    ctx.rect(this.x - this.size/2, this.y - this.size/2, this.size, this.size);
-                    ctx.fill();
-                }
+                if (this.type === 'stinger' || this.type === 'bouncer') { this.trail.forEach((pos, index) => { ctx.globalAlpha = (index / this.trail.length) * 0.4; ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(pos.x, pos.y, this.size * 0.6, 0, Math.PI * 2); ctx.fill(); }); ctx.globalAlpha = 1.0; }
+                ctx.fillStyle = this.color; ctx.shadowBlur = 15; ctx.shadowColor = this.color; ctx.beginPath();
+                if (this.type === 'stinger') { const angle = Math.atan2(centerY - this.y, centerX - this.x); ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(angle); ctx.moveTo(10, 0); ctx.lineTo(-6, 6); ctx.lineTo(-6, -6); ctx.closePath(); ctx.fill(); ctx.restore(); } 
+                else if (this.type === 'bouncer') { ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); if (this.isImmortal) { ctx.strokeStyle = "#fff"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(this.x, this.y, this.size + 4, 0, Math.PI * 2); ctx.stroke(); } if (this.hp > 1) { ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(this.x, this.y, this.size/2.5, 0, Math.PI * 2); ctx.fill(); } } 
+                else { ctx.rect(this.x - this.size/2, this.y - this.size/2, this.size, this.size); ctx.fill(); }
                 ctx.shadowBlur = 0;
             }
         }
 
         class Particle {
-            constructor(x, y, color) {
-                this.x = x; this.y = y; this.color = color;
-                const angle = Math.random() * Math.PI * 2;
-                const speed = Math.random() * 7 + 3;
-                this.vx = Math.cos(angle) * speed;
-                this.vy = Math.sin(angle) * speed;
-                this.life = 1.0;
-                this.decay = 0.03 + Math.random() * 0.03;
-            }
+            constructor(x, y, color) { this.x = x; this.y = y; this.color = color; const angle = Math.random() * Math.PI * 2; const speed = Math.random() * 7 + 3; this.vx = Math.cos(angle) * speed; this.vy = Math.sin(angle) * speed; this.life = 1.0; this.decay = 0.03 + Math.random() * 0.03; }
             update() { this.x += this.vx; this.y += this.vy; this.life -= this.decay; return this.life > 0; }
-            draw() {
-                ctx.globalAlpha = this.life;
-                ctx.fillStyle = this.color;
-                ctx.beginPath(); ctx.arc(this.x, this.y, 2, 0, Math.PI * 2); ctx.fill();
-                ctx.globalAlpha = 1.0;
-            }
+            draw() { ctx.globalAlpha = this.life; ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, 2, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1.0; }
         }
 
-        function createExplosion(x, y, color, count) {
-            for (let i = 0; i < count; i++) particles.push(new Particle(x, y, color));
-        }
+        function createExplosion(x, y, color, count) { for (let i = 0; i < count; i++) particles.push(new Particle(x, y, color)); }
 
         function drawCore() {
-            const coreColor = (currentHealth > 1) ? '#0ff' : '#f0f';
-            ctx.shadowBlur = 20; ctx.shadowColor = coreColor;
-            ctx.fillStyle = coreColor;
-            ctx.beginPath(); ctx.arc(centerX, centerY, 15, 0, Math.PI * 2); ctx.fill();
-            ctx.strokeStyle = coreColor; ctx.lineWidth = 1;
-            for(let i = 0; i < currentHealth; i++) {
-                ctx.beginPath(); ctx.arc(centerX, centerY, 20 + (i * 3), 0, Math.PI * 2); ctx.stroke();
-            }
-            ctx.shadowBlur = 0;
+            const coreColor = (currentHealth > 1) ? '#0ff' : '#f0f'; ctx.shadowBlur = 20; ctx.shadowColor = coreColor; ctx.fillStyle = coreColor;
+            ctx.beginPath(); ctx.arc(centerX, centerY, 15, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = coreColor; ctx.lineWidth = 1;
+            for(let i = 0; i < currentHealth; i++) { ctx.beginPath(); ctx.arc(centerX, centerY, 20 + (i * 3), 0, Math.PI * 2); ctx.stroke(); } ctx.shadowBlur = 0;
         }
 
         function drawBarricades() {
             barricadeUnits.forEach(b => {
-                if (!b.active) return;
-                const bx = centerX + Math.cos(b.angle) * b.dist;
-                const by = centerY + Math.sin(b.angle) * b.dist;
-                ctx.fillStyle = "#CD853F"; 
-                ctx.shadowBlur = 8;
-                ctx.shadowColor = "rgba(0,0,0,0.5)";
-                ctx.fillRect(bx - b.size/2, by - b.size/2, b.size, b.size);
-                ctx.strokeStyle = "#000";
-                ctx.lineWidth = 3;
-                const s = b.size * 0.35;
-                ctx.beginPath();
-                ctx.moveTo(bx, by - s); ctx.lineTo(bx, by + s);
-                ctx.moveTo(bx - s, by); ctx.lineTo(bx + s, by);
-                ctx.stroke();
-                ctx.shadowBlur = 0;
+                if (!b.active) return; const bx = centerX + Math.cos(b.angle) * b.dist; const by = centerY + Math.sin(b.angle) * b.dist;
+                ctx.fillStyle = "#CD853F"; ctx.shadowBlur = 8; ctx.shadowColor = "rgba(0,0,0,0.5)"; ctx.fillRect(bx - b.size/2, by - b.size/2, b.size, b.size);
+                ctx.strokeStyle = "#000"; ctx.lineWidth = 3; const s = b.size * 0.35; ctx.beginPath(); ctx.moveTo(bx, by - s); ctx.lineTo(bx, by + s); ctx.moveTo(bx - s, by); ctx.lineTo(bx + s, by); ctx.stroke(); ctx.shadowBlur = 0;
             });
         }
 
         function drawShields() {
-            const arcWidth = 0.7 + (saveData.upgrades.width - 1) * 0.15; 
-            const shieldCount = saveData.upgrades.multi;
+            const arcWidth = 0.7 + (saveData.upgrades.width - 1) * 0.15; const shieldCount = saveData.upgrades.multi;
             for (let i = 0; i < shieldCount; i++) {
-                ctx.save();
-                ctx.translate(centerX, centerY);
-                const offset = (Math.PI * 2 / shieldCount) * i;
-                ctx.rotate(rotation + offset);
-                ctx.strokeStyle = '#0ff'; ctx.lineWidth = SHIELD_THICKNESS;
-                ctx.lineCap = 'round'; ctx.shadowBlur = 15; ctx.shadowColor = '#0ff';
-                ctx.beginPath(); ctx.arc(0, 0, SHIELD_RADIUS, -arcWidth/2, arcWidth/2); ctx.stroke();
-                ctx.restore();
+                ctx.save(); ctx.translate(centerX, centerY); const offset = (Math.PI * 2 / shieldCount) * i; ctx.rotate(rotation + offset);
+                ctx.strokeStyle = '#0ff'; ctx.lineWidth = SHIELD_THICKNESS; ctx.lineCap = 'round'; ctx.shadowBlur = 15; ctx.shadowColor = '#0ff';
+                ctx.beginPath(); ctx.arc(0, 0, SHIELD_RADIUS, -arcWidth/2, arcWidth/2); ctx.stroke(); ctx.restore();
             }
         }
 
         function loop(timestamp) {
-            if (!lastTime) lastTime = timestamp;
-            const dt = timestamp - lastTime;
-            lastTime = timestamp;
-            ctx.fillStyle = '#050505';
-            ctx.fillRect(0, 0, width, height);
+            if (!lastTime) lastTime = timestamp; const dt = timestamp - lastTime; lastTime = timestamp;
+            ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, width, height);
+            
             if (shakeAmount > 0) {
-                const sx = (Math.random() - 0.5) * shakeAmount;
-                const sy = (Math.random() - 0.5) * shakeAmount;
-                ctx.save(); ctx.translate(sx, sy);
-                shakeAmount *= 0.9;
+                const sx = (Math.random() - 0.5) * shakeAmount; const sy = (Math.random() - 0.5) * shakeAmount;
+                ctx.save(); ctx.translate(sx, sy); shakeAmount *= 0.9;
             }
+            
+            if (empActive) {
+                empRadius += 25;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, empRadius, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(0, 255, 255, ${Math.max(0, 1 - empRadius/width)})`;
+                ctx.lineWidth = 15;
+                ctx.shadowBlur = 30; ctx.shadowColor = '#0ff';
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+                if (empRadius > Math.max(width, height)) empActive = false;
+            }
+
             if (gameActive && !isPaused) {
-                // Track Playtime and current wave efficiency (Convert ms to seconds)
-                saveData.playtime = (saveData.playtime || 0) + (dt / 1000);
-                currentWaveTime += (dt / 1000);
-                
-                const baseRotate = 0.04;
-                const speedMult = 1 + (saveData.upgrades.speed - 1) * 0.25;
-                rotation += baseRotate * speedMult * rotationDir * (1 + (difficulty-1)*0.15);
-                spawnTimer -= dt;
+                saveData.playtime = (saveData.playtime || 0) + (dt / 1000); currentWaveTime += (dt / 1000);
+                const baseRotate = 0.04; const speedMult = 1 + (saveData.upgrades.speed - 1) * 0.25;
+                rotation += baseRotate * speedMult * rotationDir * (1 + (difficulty-1)*0.15); spawnTimer -= dt;
                 
                 if (!isBossWave) {
                     const pendingDestruction = totalEnemiesToDestroy - enemiesDestroyedInWave;
-                    if (spawnTimer <= 0 && pendingDestruction > enemies.length && enemies.length < 5) {
-                        enemies.push(new Enemy());
-                        spawnTimer = Math.max(300, 1000 - (difficulty * 80));
-                    }
+                    if (spawnTimer <= 0 && pendingDestruction > enemies.length && enemies.length < 5) { enemies.push(new Enemy()); spawnTimer = Math.max(300, 1000 - (difficulty * 80)); }
                 }
                 
-                enemies = enemies.filter(e => e.update());
-                bosses = bosses.filter(b => b.update());
+                enemies = enemies.filter(e => e.update()); bosses = bosses.filter(b => b.update());
                 
-                if (isBossWave && bosses.length === 0) {
-                    enemies = []; 
-                    onWaveClear();
-                } else if (!isBossWave && enemiesDestroyedInWave >= totalEnemiesToDestroy && enemies.length === 0) {
-                    onWaveClear();
-                }
+                if (isBossWave && bosses.length === 0) { enemies = []; onWaveClear(); } 
+                else if (!isBossWave && enemiesDestroyedInWave >= totalEnemiesToDestroy && enemies.length === 0) { onWaveClear(); }
             }
             
-            if (!isPaused) {
-                particles = particles.filter(p => p.update());
-                floatingTexts = floatingTexts.filter(ft => ft.update());
-            }
+            if (!isPaused) { particles = particles.filter(p => p.update()); floatingTexts = floatingTexts.filter(ft => ft.update()); }
 
-            drawCore();
-            drawBarricades();
-            enemies.forEach(e => e.draw());
-            bosses.forEach(b => b.draw());
-            particles.forEach(p => p.draw());
-            floatingTexts.forEach(ft => ft.draw());
-            drawShields();
+            drawCore(); drawBarricades(); enemies.forEach(e => e.draw()); bosses.forEach(b => b.draw());
+            particles.forEach(p => p.draw()); floatingTexts.forEach(ft => ft.draw()); drawShields();
+            
             if (shakeAmount > 0.1) ctx.restore(); else shakeAmount = 0;
             requestAnimationFrame(loop);
         }
         
-        // Expose functions to the window so HTML buttons can trigger them
         window.togglePause = () => togglePause();
         window.quitToMenu = () => quitToMenu();
         window.startGame = (heal) => startGame(heal);
@@ -2111,6 +1484,7 @@
         window.handleSignOut = () => handleSignOut();
         window.renderLeaderboardUI = (t) => renderLeaderboardUI(t);
         window.endGame = () => endGame();
+        window.triggerEMP = () => triggerEMP();
         
         requestAnimationFrame(loop);
     </script>

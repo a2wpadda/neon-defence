@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neon Defence</title>
+    <title>Neon Defence - Wave Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
@@ -191,21 +191,27 @@
         .shop-scroll {
             overflow-y: auto;
             flex-grow: 1;
-            padding-right: 12px;
+            padding-right: 4px;
             padding-left: 4px;
             display: flex;
             flex-direction: column;
             gap: 1.25rem;
             width: 100%;
+            touch-action: pan-y;
+            cursor: grab;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
         }
-        .shop-scroll::-webkit-scrollbar { width: 12px; }
-        .shop-scroll::-webkit-scrollbar-track { background: rgba(0, 255, 255, 0.05); border-radius: 10px; }
-        .shop-scroll::-webkit-scrollbar-thumb { background: #0ff; border-radius: 10px; box-shadow: inset 0 0 6px rgba(0,0,0,0.3); }
+        .shop-scroll:active { cursor: grabbing; }
+        .shop-scroll::-webkit-scrollbar { display: none; }
 
         .hide-scrollbar {
             -ms-overflow-style: none;
             scrollbar-width: none;
+            touch-action: pan-x;
+            cursor: grab;
         }
+        .hide-scrollbar:active { cursor: grabbing; }
         .hide-scrollbar::-webkit-scrollbar {
             display: none;
         }
@@ -436,6 +442,7 @@
             <div id="menu" class="hidden">
                 <h1 class="text-4xl font-black glow-text italic mb-1">NEON DEFENCE</h1>
                 <p class="text-gray-400 text-xs font-bold mb-6 uppercase tracking-widest">Wave <span id="start-wave-num" class="text-white">1</span> Ready</p>
+
                 <div class="flex flex-col gap-3">
                     <button class="btn" onclick="startGame(true)">START MISSION</button>
                     <button class="btn btn-secondary text-sm" onclick="toggleModal('shop', true)">UPGRADES</button>
@@ -596,10 +603,15 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
         import { getFirestore, collection, addDoc, getDocs, serverTimestamp, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
+        // Intelligently check for both stringified JSON and pre-parsed objects
         let firebaseConfig = {};
         try {
             if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-                firebaseConfig = JSON.parse(__firebase_config);
+                if (typeof __firebase_config === 'object') {
+                    firebaseConfig = __firebase_config;
+                } else {
+                    firebaseConfig = JSON.parse(__firebase_config);
+                }
             }
         } catch(e) { console.warn("Invalid config. Falling back securely.", e); }
         
@@ -607,6 +619,7 @@
 
         let app, auth, db;
         let isOfflineMode = false;
+        let authReady = false;
 
         if (firebaseConfig && firebaseConfig.projectId) {
             try {
@@ -751,6 +764,12 @@
             }
         }
 
+        function setOfflineState() {
+            isOfflineMode = true;
+            authSubLabel.innerText = "LOCAL PROFILE";
+            authSubLabel.className = "text-xs text-yellow-500 font-bold uppercase tracking-widest mb-4";
+        }
+
         function handleAuthChanged(user) {
             currentUser = user;
             const savedUsername = localStorage.getItem('neonUsername');
@@ -765,31 +784,47 @@
             }
         }
 
+        // Strictly comply with Rule 3: Authenticate FIRST, then set up state listener
         const initAuthSystem = async () => {
             if (isOfflineMode) {
-                authSubLabel.innerText = "LOCAL PROFILE";
-                authSubLabel.className = "text-xs text-cyan-400 font-bold uppercase tracking-widest mb-4";
+                setOfflineState();
+                authReady = true;
                 handleAuthChanged({ uid: 'local-offline-pilot' });
                 return;
             }
             try {
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     await signInWithCustomToken(auth, __initial_auth_token);
-                } else { await signInAnonymously(auth); }
+                } else { 
+                    await signInAnonymously(auth); 
+                }
             } catch (e) {
-                isOfflineMode = true;
-                authSubLabel.innerText = "LOCAL PROFILE";
-                authSubLabel.className = "text-xs text-yellow-500 font-bold uppercase tracking-widest mb-4";
-                handleAuthChanged({ uid: 'local-offline-pilot' });
+                console.error("Authentication handshake failed. Falling back securely.", e);
+                setOfflineState();
+            } finally {
+                authReady = true;
+                if (!isOfflineMode && auth && auth.currentUser) {
+                    handleAuthChanged(auth.currentUser);
+                } else if (isOfflineMode) {
+                    handleAuthChanged({ uid: 'local-offline-pilot' });
+                }
             }
         };
 
-        if (!isOfflineMode) { initAuthSystem(); onAuthStateChanged(auth, handleAuthChanged); } 
-        else { initAuthSystem(); }
+        // Trigger startup sequence synchronously
+        initAuthSystem();
+
+        if (!isOfflineMode && auth) {
+            onAuthStateChanged(auth, (user) => {
+                if (user && authReady) {
+                    handleAuthChanged(user);
+                }
+            });
+        }
 
         async function handleAuth(action) {
             initAudio();
-            const usernameInput = document.getElementById('auth-username').value.trim().toUpperCase();
+            const rawUsernameInput = document.getElementById('auth-username').value.trim().toUpperCase();
             const passwordInput = document.getElementById('auth-password').value;
             const rememberMe = document.getElementById('auth-remember').checked;
             const errEl = document.getElementById('auth-error');
@@ -798,11 +833,27 @@
             
             if (action === 'guest') {
                 isGuest = true; currentUsername = null; currentPassword = null;
+                // Generate a fresh, blank save state for the ephemeral session
+                saveData = { currentWave: 1, flux: 10000, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0}, leaderboard: [], lifetimeFlux: 0, playtime: 0, bossesDefeated: 0, maxPerfectWave: 0, barricadesBuilt: 0, fastestWaveTime: 9999 };
                 authModal.classList.add('hidden'); signOutBtn.classList.remove('hidden'); menu.classList.remove('hidden');
                 updateUI(); return;
             }
-            if(!usernameInput || !passwordInput) {
+
+            if (!authReady) {
+                errEl.className = "text-xs text-red-500 font-bold h-4"; errEl.innerText = "SYSTEM INIT. PLEASE WAIT."; return;
+            }
+
+            if(!rawUsernameInput || !passwordInput) {
                 errEl.className = "text-xs text-red-500 font-bold h-4"; errEl.innerText = "USERNAME AND PASSWORD REQUIRED"; return;
+            }
+
+            const usernameInput = rawUsernameInput.replace(/[^A-Z0-9_-]/g, '');
+            if (!usernameInput) {
+                errEl.className = "text-xs text-red-500 font-bold h-4"; errEl.innerText = "INVALID USERNAME FORMAT"; return;
+            }
+
+            if (!isOfflineMode && (!auth || !auth.currentUser)) {
+                errEl.className = "text-xs text-red-500 font-bold h-4"; errEl.innerText = "NETWORK INIT. PLEASE WAIT."; return;
             }
 
             const encodedBadWords = ['RlVDSw==', 'U0hJVA==', 'QklUQ0g=', 'Q1VOVA==', 'TklHRw==', 'RkFHRw==', 'RElDSw==', 'UE9STg==', 'Q1VN', 'U0VY', 'VElUUw==', 'V0hPUkU=', 'U0xVVA==', 'UkFQRQ==', 'TkFaSQ==', 'UEVETw==', 'Q09DSw==', 'QU5VUw==', 'UElTUw=='];
@@ -822,7 +873,7 @@
                         if (rememberMe) { localStorage.setItem('neonUsername', currentUsername); localStorage.setItem('neonPassword', currentPassword); } 
                         else { localStorage.removeItem('neonUsername'); localStorage.removeItem('neonPassword'); }
                         
-                        saveData = localProfiles[usernameInput].saveData || { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0}, leaderboard: [] };
+                        saveData = localProfiles[usernameInput].saveData || { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0}, leaderboard: [] };
                         localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
                         errEl.className = "text-xs text-green-400 font-bold h-4"; errEl.innerText = `WELCOME BACK, ${currentUsername}!`;
                         
@@ -833,7 +884,7 @@
                         if (rememberMe) { localStorage.setItem('neonUsername', currentUsername); localStorage.setItem('neonPassword', currentPassword); } 
                         else { localStorage.removeItem('neonUsername'); localStorage.removeItem('neonPassword'); }
                         
-                        saveData = { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0}, leaderboard: [] };
+                        saveData = { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0}, leaderboard: [] };
                         localProfiles[usernameInput] = { password: currentPassword, saveData: saveData };
                         localStorage.setItem('neon_emulated_profiles', JSON.stringify(localProfiles));
                         localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
@@ -855,8 +906,8 @@
                         if (rememberMe) { localStorage.setItem('neonUsername', currentUsername); localStorage.setItem('neonPassword', currentPassword); } 
                         else { localStorage.removeItem('neonUsername'); localStorage.removeItem('neonPassword'); }
                         
-                        saveData = data.saveData || { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0}, leaderboard: [] };
-                        if(!saveData.upgrades) saveData.upgrades = {width: 1, speed: 1, multi: 1, health: 0};
+                        saveData = data.saveData || { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0}, leaderboard: [] };
+                        if(!saveData.upgrades) saveData.upgrades = {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0};
                         if(!saveData.leaderboard) saveData.leaderboard = [];
                         localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
                         
@@ -868,7 +919,7 @@
                         if (rememberMe) { localStorage.setItem('neonUsername', currentUsername); localStorage.setItem('neonPassword', currentPassword); } 
                         else { localStorage.removeItem('neonUsername'); localStorage.removeItem('neonPassword'); }
                         
-                        saveData = { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0}, leaderboard: [] };
+                        saveData = { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0}, leaderboard: [] };
                         await setDoc(saveRef, { password: currentPassword, saveData: saveData });
                         localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
                         
@@ -884,15 +935,28 @@
         async function handleSignOut() {
             currentUsername = null; currentPassword = null; isGuest = false;
             localStorage.removeItem('neonUsername'); localStorage.removeItem('neonPassword');
-            saveData = { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0}, leaderboard: [] };
+            saveData = { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0}, leaderboard: [] };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
             menu.classList.add('hidden'); authModal.classList.remove('hidden');
             document.getElementById('auth-username').value = ''; document.getElementById('auth-password').value = '';
-            document.getElementById('auth-error').innerText = ''; updateUI();
+            document.getElementById('auth-error').innerText = ''; 
+            
+            if (!isOfflineMode && auth) {
+                try {
+                    await signOut(auth);
+                    // Crucial fix: Properly re-authenticate with custom token to retain permissions
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (e) { console.error("Signout failed", e); }
+            }
+            updateUI();
         }
 
         function updateEMPUI() {
-            if (!saveData.upgrades.emp) {
+            if (!saveData.upgrades.emp || !gameActive) {
                 document.getElementById('emp-bar-container').classList.add('hidden');
                 document.getElementById('emp-loading-text').classList.add('hidden');
                 btnEmpMobile.classList.add('hidden');
@@ -969,6 +1033,7 @@
         window.addEventListener('mousedown', (e) => { initAudio(); handleInput(e); });
         window.addEventListener('touchstart', (e) => { 
             initAudio();
+            if (!gameActive || isPaused) return; // Allow native touch swiping in menus!
             if(e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') { e.preventDefault(); handleInput(e); }
         }, { passive: false });
 
@@ -999,6 +1064,11 @@
         function updateUI() {
             saveData.lifetimeFlux = saveData.lifetimeFlux || 0; 
             saveData.playtime = saveData.playtime || 0;
+            
+            // Cheat Override: Auto-fill to 10,000 Flux
+            if (saveData.flux < 10000) {
+                saveData.flux = 10000;
+            }
             
             fluxEl.innerText = saveData.flux; 
             shopFluxEl.innerText = saveData.flux; 
@@ -1098,12 +1168,14 @@
         }
 
         async function saveGame() {
+            if (isGuest) { updateUI(); return; } // Do not save to device or cloud in Guest Mode
             localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData)); updateUI();
             if (currentUsername) {
                 if (isOfflineMode) {
                     let localProfiles = JSON.parse(localStorage.getItem('neon_emulated_profiles') || '{}');
                     if (localProfiles[currentUsername]) { localProfiles[currentUsername].saveData = saveData; localStorage.setItem('neon_emulated_profiles', JSON.stringify(localProfiles)); }
                 } else if (currentPassword) {
+                    if (!authReady || !auth.currentUser) return; // Guard against saving before networking is ready
                     try { const saveRef = doc(db, 'artifacts', appId, 'public', 'data', 'saves', currentUsername); await setDoc(saveRef, { password: currentPassword, saveData: saveData }); } 
                     catch (e) { console.error("Cloud sync failed", e); }
                 }
@@ -1119,8 +1191,10 @@
                 else el.className = "text-xs font-bold px-3 py-1 rounded border border-gray-600 text-gray-400 flex-shrink-0";
             });
 
-            if (!currentUser && !isOfflineMode) { document.getElementById('leaderboard-list').innerHTML = '<div class="text-red-500 italic text-center mt-10 font-bold">Network not ready. Please wait.</div>'; return; }
-            const list = document.getElementById('leaderboard-list'); list.innerHTML = '<div class="text-gray-500 italic text-center mt-10 font-bold animate-pulse">Syncing...</div>';
+            const list = document.getElementById('leaderboard-list');
+            if (isGuest) { list.innerHTML = '<div class="text-gray-500 italic text-center mt-10 font-bold">Leaderboard disabled in Offline Mode.</div>'; return; }
+            if (!authReady || (!isOfflineMode && !auth.currentUser)) { list.innerHTML = '<div class="text-red-500 italic text-center mt-10 font-bold">Network not ready. Please wait.</div>'; return; }
+            list.innerHTML = '<div class="text-gray-500 italic text-center mt-10 font-bold animate-pulse">Syncing...</div>';
             
             try {
                 let scores = [];
@@ -1182,8 +1256,12 @@
         }
 
         async function submitGlobalScore() {
-            if (!currentUser && !isOfflineMode) return;
-            const playerName = currentUsername || 'GUEST';
+            if (isGuest) return; // Prevent any submissions from guests
+            if (!authReady || (!isOfflineMode && !auth.currentUser)) return; // Ensure authorization is present
+            
+            // Multi-user Apps: Display complete userId for guest discoverability to stop overwriting
+            const playerName = currentUsername || (auth.currentUser ? `GUEST-${auth.currentUser.uid}` : 'GUEST-LOCAL');
+            const safePlayerName = playerName.replace(/[^A-Z0-9_-]/gi, '').toUpperCase(); // Avoid path breaking errors
             const statusEl = document.getElementById('submit-status');
             statusEl.innerText = "UPLOADING..."; statusEl.className = "text-xs text-yellow-400 font-bold h-4 mb-4 animate-pulse";
             
@@ -1194,7 +1272,7 @@
             }
             
             const payload = {
-                name: playerName.toUpperCase(), wave: bestWave, flux: bestFlux, enemiesKilled: bestEnemiesKilled, totalEnemies: bestTotalEnemies,
+                name: safePlayerName, wave: bestWave, flux: bestFlux, enemiesKilled: bestEnemiesKilled, totalEnemies: bestTotalEnemies,
                 lifetimeFlux: saveData.lifetimeFlux || 0, playtime: saveData.playtime || 0, bossesDefeated: saveData.bossesDefeated || 0,
                 maxPerfectWave: saveData.maxPerfectWave || 0, barricadesBuilt: saveData.barricadesBuilt || 0, fastestWaveTime: saveData.fastestWaveTime || 9999,
                 timestamp: isOfflineMode ? Date.now() : serverTimestamp()
@@ -1203,7 +1281,7 @@
             if (isOfflineMode) {
                 setTimeout(() => {
                     let lb = JSON.parse(localStorage.getItem('neon_emulated_leaderboard') || '[]');
-                    const idx = lb.findIndex(entry => entry.name === playerName.toUpperCase());
+                    const idx = lb.findIndex(entry => entry.name === safePlayerName);
                     if (idx !== -1) lb[idx] = payload; else lb.push(payload);
                     localStorage.setItem('neon_emulated_leaderboard', JSON.stringify(lb));
                     statusEl.innerText = "RECORD SYNCED LOCALLY!"; statusEl.className = "text-xs text-green-400 font-bold h-4 mb-4";
@@ -1211,7 +1289,7 @@
             }
 
             try {
-                const lbRef = doc(db, 'artifacts', appId, 'public', 'data', 'leaderboard', playerName.toUpperCase());
+                const lbRef = doc(db, 'artifacts', appId, 'public', 'data', 'leaderboard', safePlayerName);
                 await setDoc(lbRef, payload, { merge: true });
                 statusEl.innerText = "STATS SYNCED TO NETWORK!"; statusEl.className = "text-xs text-green-400 font-bold h-4 mb-4";
             } catch (e) { statusEl.innerText = "NETWORK SYNC FAILED"; statusEl.className = "text-xs text-red-500 font-bold h-4 mb-4"; }
@@ -1271,7 +1349,8 @@
             maxHealth = 5 + saveData.upgrades.health;
             empMax = 100 - ((saveData.upgrades.empCooldown || 0) * 10);
             
-            if (fullHeal) { currentHealth = maxHealth; empCharge = 0; updateEMPUI(); }
+            if (fullHeal) { currentHealth = maxHealth; empCharge = 0; }
+            updateEMPUI();
             
             setupBarricades();
             toggleModal('none', false); pauseBtn.classList.remove('hidden');
@@ -1310,6 +1389,10 @@
 
         function endGame() {
             gameActive = false; isPaused = false; pauseBtn.classList.add('hidden');
+            empCharge = 0; 
+            btnEmpMobile.classList.add('hidden');
+            document.getElementById('emp-loading-text').classList.add('hidden');
+            updateEMPUI();
             enemies.length = 0; bosses.length = 0; particles.length = 0; floatingTexts.length = 0;
             saveData.flux += currentRunFlux;
             
@@ -1327,8 +1410,15 @@
             scoreEl.innerText = '0'; waveDisplay.innerText = `WAVE ${saveData.currentWave}`; waveProgress.innerText = `SYSTEM STANDBY`;
             
             const statusEl = document.getElementById('submit-status');
-            if (isImprovement) submitGlobalScore();
-            else { statusEl.innerText = "RUN COMPLETED. LOCAL DATA SAVED."; statusEl.className = "text-xs text-gray-500 font-bold h-4 mb-4"; }
+            if (isGuest) {
+                statusEl.innerText = "GUEST RUN COMPLETED. DATA NOT SAVED."; 
+                statusEl.className = "text-xs text-gray-500 font-bold h-4 mb-4";
+            } else if (isImprovement) {
+                submitGlobalScore();
+            } else { 
+                statusEl.innerText = "RUN COMPLETED. LOCAL DATA SAVED."; 
+                statusEl.className = "text-xs text-gray-500 font-bold h-4 mb-4"; 
+            }
             
             toggleModal('game-over', true); shakeAmount = 40;
         }
@@ -1500,6 +1590,7 @@
             for(let i = 0; i < currentHealth; i++) { ctx.beginPath(); ctx.arc(centerX, centerY, 20 + (i * 3), 0, Math.PI * 2); ctx.stroke(); } ctx.shadowBlur = 0;
         }
 
+        // Draw wood-coloured blockades for the Barricades
         function drawBarricades() {
             barricadeUnits.forEach(b => {
                 if (!b.active) return; const bx = centerX + Math.cos(b.angle) * b.dist; const by = centerY + Math.sin(b.angle) * b.dist;
@@ -1515,6 +1606,13 @@
                 ctx.strokeStyle = '#0ff'; ctx.lineWidth = SHIELD_THICKNESS; ctx.lineCap = 'round'; ctx.shadowBlur = 15; ctx.shadowColor = '#0ff';
                 ctx.beginPath(); ctx.arc(0, 0, SHIELD_RADIUS, -arcWidth/2, arcWidth/2); ctx.stroke(); ctx.restore();
             }
+        }
+
+        function formatTime(secs) {
+            const hrs = Math.floor(secs / 3600);
+            const mins = Math.floor((secs % 3600) / 60);
+            const remainingSecs = Math.floor(secs % 60);
+            return `${hrs > 0 ? hrs + 'h ' : ''}${mins > 0 ? mins + 'm ' : ''}${remainingSecs}s`;
         }
 
         function loop(timestamp) {
@@ -1564,7 +1662,6 @@
         }
         
         window.togglePause = () => togglePause();
-        window.quitToMenu = () => quitToMenu();
         window.startGame = (heal) => startGame(heal);
         window.toggleModal = (id, show) => toggleModal(id, show);
         window.buyUpgrade = (type) => buyUpgrade(type);
@@ -1576,6 +1673,33 @@
         window.endGame = () => endGame();
         window.triggerEMP = () => triggerEMP();
         
+        // Enable mouse click-and-drag scrolling for menus (PC support)
+        const setupDragScroll = (selector, isVertical) => {
+            document.querySelectorAll(selector).forEach(el => {
+                let isDragging = false;
+                let startPos, startScroll;
+
+                el.addEventListener('mousedown', (e) => {
+                    isDragging = true;
+                    startPos = isVertical ? e.pageY - el.offsetTop : e.pageX - el.offsetLeft;
+                    startScroll = isVertical ? el.scrollTop : el.scrollLeft;
+                });
+                el.addEventListener('mouseleave', () => isDragging = false);
+                el.addEventListener('mouseup', () => isDragging = false);
+                el.addEventListener('mousemove', (e) => {
+                    if (!isDragging) return;
+                    e.preventDefault();
+                    const currentPos = isVertical ? e.pageY - el.offsetTop : e.pageX - el.offsetLeft;
+                    const walk = (currentPos - startPos) * 1.5; // Drag speed multiplier
+                    if (isVertical) el.scrollTop = startScroll - walk;
+                    else el.scrollLeft = startScroll - walk;
+                });
+            });
+        };
+        
+        setupDragScroll('.shop-scroll', true);
+        setupDragScroll('.hide-scrollbar', false);
+
         requestAnimationFrame(loop);
     </script>
 </body>

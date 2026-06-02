@@ -243,17 +243,6 @@
             overflow: hidden;
             transition: all 0.3s ease;
         }
-        .upgrade-row.locked { opacity: 0.3; filter: grayscale(0.9); border-left-color: #ff0055; }
-
-        .lock-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            display: flex; justify-content: center; align-items: center;
-            font-size: 0.9rem; font-weight: 900; color: #ff0055;
-            text-transform: uppercase; letter-spacing: 2px;
-            pointer-events: none; padding: 10px;
-        }
 
         .upgrade-info h3 { font-weight: 900; font-size: 1.35rem; margin: 0; color: #fff; display: flex; align-items: center; gap: 12px; }
         .upgrade-info p { font-size: 0.95rem; color: #aaa; margin: 4px 0 0 0; line-height: 1.4; }
@@ -415,6 +404,7 @@
             
             <button id="btn-emp-mobile" class="hidden" onclick="triggerEMP()">EMP READY</button>
             
+            <!-- Auth Menu (New) -->
             <div id="auth-modal" class="absolute bg-black/95 backdrop-blur-[25px] p-10 rounded-[32px] border-2 border-[#0ff] text-center pointer-events-auto flex flex-col z-50 shadow-[0_0_100px_rgba(0,255,255,0.15)] w-[90vw] max-w-[400px] gap-4" style="top: 50%; left: 50%; transform: translate(-50%, -50%);">
                 <h1 class="modal-title glow-text mb-2 text-4xl">WELCOME</h1>
                 <p id="auth-sub-label" class="text-xs text-gray-400 font-bold uppercase tracking-widest mb-4">Secure Profile Connection</p>
@@ -437,6 +427,7 @@
                 </div>
             </div>
 
+            <!-- Start Menu -->
             <div id="menu" class="hidden">
                 <h1 class="text-4xl font-black glow-text italic mb-1">NEON DEFENCE</h1>
                 <p class="text-gray-400 text-xs font-bold mb-6 uppercase tracking-widest">Wave <span id="start-wave-num" class="text-white">1</span> Ready</p>
@@ -450,9 +441,11 @@
                         <div id="unlock-instruction" class="unlock-hint">Upgrade Health to unlock</div>
                     </div>
                 </div>
+                <!-- Sign Out Button -->
                 <button id="btn-signout" class="mt-6 text-xs text-red-500 font-bold tracking-widest uppercase underline hidden pointer-events-auto" onclick="handleSignOut()">Disconnect Profile</button>
             </div>
 
+            <!-- Pause Menu -->
             <div id="pause-menu" class="hidden">
                 <h1 class="text-4xl font-black text-white mb-2 tracking-widest">PAUSED</h1>
                 <p class="text-[#0ff] text-xs font-bold mb-8 uppercase tracking-widest animate-pulse">SYSTEM STANDBY</p>
@@ -462,6 +455,7 @@
                 </div>
             </div>
 
+            <!-- Upgrades Menu -->
             <div id="shop" class="hidden">
                 <button class="btn-exit" onclick="toggleModal('shop', false)">×</button>
                 <div class="flex justify-between items-end mb-4 border-b-2 border-white/10 pb-4 mt-20">
@@ -482,7 +476,6 @@
                     </div>
 
                     <div class="upgrade-row" id="row-speed">
-                        <div class="lock-overlay" id="lock-speed">Requires Span Lv 2</div>
                         <div class="upgrade-info">
                             <h3>Rotation Speed <span id="lvl-speed" class="lvl-badge">1</span></h3>
                             <p>Increases kinetic rotation for faster intercept timing.</p>
@@ -491,7 +484,6 @@
                     </div>
 
                     <div class="upgrade-row" id="row-health">
-                        <div class="lock-overlay" id="lock-health">Requires Speed Lv 2</div>
                         <div class="upgrade-info">
                             <h3>Health <span id="lvl-health" class="lvl-badge">0</span></h3>
                             <p>Reinforces core structure. Unlocks the Perimeter Shop.</p>
@@ -500,7 +492,6 @@
                     </div>
 
                     <div class="upgrade-row" id="row-multi">
-                        <div class="lock-overlay" id="lock-multi">Requires Span Lv 3</div>
                         <div class="upgrade-info">
                             <h3>Multi-Shields <span id="lvl-multi" class="lvl-badge">1</span></h3>
                             <p>Deploys additional orbiting shield modules for total coverage.</p>
@@ -517,7 +508,6 @@
                     </div>
 
                     <div class="upgrade-row" id="row-empCooldown">
-                        <div class="lock-overlay" id="lock-empCooldown">Requires EMP Lv 1</div>
                         <div class="upgrade-info">
                             <h3>EMP Cooldown <span id="lvl-empCooldown" class="lvl-badge">0</span></h3>
                             <p>Reduces the charge required to trigger the EMP.</p>
@@ -527,6 +517,7 @@
                 </div>
             </div>
 
+            <!-- Shop Menu -->
             <div id="barricade-shop" class="hidden">
                 <button class="btn-exit" onclick="toggleModal('barricade-shop', false)">×</button>
                 <div class="flex justify-between items-end mb-4 border-b-2 border-white/10 pb-4 mt-20">
@@ -549,6 +540,7 @@
                 </div>
             </div>
 
+            <!-- Leaderboard Menu -->
             <div id="leaderboard-modal" class="hidden">
                 <button class="btn-exit" onclick="toggleModal('leaderboard-modal', false)">×</button>
                 <div class="border-b-2 border-white/10 pb-4 mt-16 text-left">
@@ -568,6 +560,7 @@
                 </div>
             </div>
 
+            <!-- Game Over -->
             <div id="game-over" class="hidden">
                 <h1 class="text-3xl font-black text-red-500 mb-1">BREACHED</h1>
                 <p class="text-gray-400 text-xs font-bold mb-6">WAVE REGRESSION ACTIVE</p>
@@ -1019,27 +1012,46 @@
             document.getElementById('cost-empCooldown').innerText = empCdLv >= 5 ? 'MAX' : 50 + (empCdLv * 25);
 
             const checkLock = (id, condition) => {
-                const row = document.getElementById(`row-${id}`); const lock = document.getElementById(`lock-${id}`); const btn = document.getElementById(`btn-${id}`);
-                if (condition) { row.classList.remove('locked'); row.style.order = '0'; lock.classList.add('hidden'); if(btn) btn.disabled = false; } 
-                else { row.classList.add('locked'); row.style.order = '1'; lock.classList.remove('hidden'); if(btn) btn.disabled = true; }
+                const row = document.getElementById(`row-${id}`);
+                if (row) {
+                    if (condition) {
+                        row.classList.remove('hidden');
+                    } else {
+                        row.classList.add('hidden');
+                    }
+                }
             };
-            checkLock('speed', up.width >= 2); checkLock('health', up.speed >= 2); checkLock('multi', up.width >= 3);
+
+            checkLock('speed', up.width >= 2);
+            checkLock('health', up.speed >= 2);
+            checkLock('multi', up.width >= 3);
+            checkLock('emp', up.health >= 1); // Only show EMP once they buy Health
             checkLock('empCooldown', (up.emp || 0) >= 1);
 
             const isShopUnlocked = up.health >= 1;
-            ['btn-open-barricade-shop', 'btn-open-shop-breached'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) { el.disabled = !isShopUnlocked; el.innerText = isShopUnlocked ? "SHOP" : "SHOP (LOCKED)"; }
-            });
-            ['unlock-instruction', 'unlock-instruction-breached'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) { if (isShopUnlocked) el.classList.add('hidden'); else el.classList.remove('hidden'); }
-            });
+            const bShopBtnMenu = document.getElementById('btn-open-barricade-shop');
+            const bShopBtnBreached = document.getElementById('btn-open-shop-breached');
+            const unlockInstructionMenu = document.getElementById('unlock-instruction');
+            const unlockInstructionBreached = document.getElementById('unlock-instruction-breached');
+            
+            if (isShopUnlocked) {
+                if(bShopBtnMenu) { bShopBtnMenu.disabled = false; bShopBtnMenu.innerText = "SHOP"; }
+                if(bShopBtnBreached) { bShopBtnBreached.disabled = false; bShopBtnBreached.innerText = "SHOP"; }
+                if(unlockInstructionMenu) unlockInstructionMenu.classList.add('hidden');
+                if(unlockInstructionBreached) unlockInstructionBreached.classList.add('hidden');
+            } else {
+                if(bShopBtnMenu) { bShopBtnMenu.disabled = true; bShopBtnMenu.innerText = "LOCKED"; }
+                if(bShopBtnBreached) { bShopBtnBreached.disabled = true; bShopBtnBreached.innerText = "LOCKED"; }
+                if(unlockInstructionMenu) unlockInstructionMenu.classList.remove('hidden');
+                if(unlockInstructionBreached) unlockInstructionBreached.classList.remove('hidden');
+            }
 
             const buyBBtn = document.getElementById('btn-buy-barricade');
-            const barricadeCost = 5 + (saveData.barricadeTotal * 5);
-            if (saveData.barricadeTotal >= 10) { buyBBtn.disabled = true; buyBBtn.innerText = "MAX"; } 
-            else { buyBBtn.disabled = false; buyBBtn.innerText = `${barricadeCost} F`; }
+            if (buyBBtn) {
+                const barricadeCost = 5 + (saveData.barricadeTotal * 5);
+                if (saveData.barricadeTotal >= 10) { buyBBtn.disabled = true; buyBBtn.innerText = "MAX"; } 
+                else { buyBBtn.disabled = false; buyBBtn.innerText = `${barricadeCost} F`; }
+            }
         }
 
         function renderHealth() {

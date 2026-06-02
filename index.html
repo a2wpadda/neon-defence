@@ -503,12 +503,12 @@
                         <button class="btn btn-buy" id="btn-health" onclick="buyUpgrade('health')"><span id="cost-health">75 F</span></button>
                     </div>
 
-                    <div class="upgrade-row" id="row-multi">
+                    <div class="upgrade-row" id="row-healthRegen">
                         <div class="upgrade-info">
-                            <h3>Multi-Shields <span id="lvl-multi" class="lvl-badge">1</span></h3>
-                            <p>Deploys additional orbiting shield modules for total coverage.</p>
+                            <h3>Regeneration <span id="lvl-healthRegen" class="lvl-badge">0</span></h3>
+                            <p>Core autorepairs additional shields at the end of each wave.</p>
                         </div>
-                        <button class="btn btn-buy" id="btn-multi" onclick="buyUpgrade('multi')"><span id="cost-multi">300 F</span></button>
+                        <button class="btn btn-buy" id="btn-healthRegen" onclick="buyUpgrade('healthRegen')"><span id="cost-healthRegen">100 F</span></button>
                     </div>
 
                     <div class="upgrade-row" id="row-empCooldown">
@@ -517,6 +517,14 @@
                             <p>Reduces the charge required to trigger the EMP.</p>
                         </div>
                         <button class="btn btn-buy" id="btn-empCooldown" onclick="buyUpgrade('empCooldown')"><span id="cost-empCooldown">50 F</span></button>
+                    </div>
+                    
+                    <div class="upgrade-row" id="row-barricadeRegen">
+                        <div class="upgrade-info">
+                            <h3>Barricade Supply <span id="lvl-barricadeRegen" class="lvl-badge">0</span></h3>
+                            <p>Increases the number of barricades supplied each wave.</p>
+                        </div>
+                        <button class="btn btn-buy" id="btn-barricadeRegen" onclick="buyUpgrade('barricadeRegen')"><span id="cost-barricadeRegen">45 F</span></button>
                     </div>
                 </div>
             </div>
@@ -541,6 +549,14 @@
                         <button class="btn btn-buy" id="btn-buy-barricade" onclick="buyBarricade()">5 F</button>
                     </div>
 
+                    <div class="upgrade-row" id="row-multi">
+                        <div class="upgrade-info">
+                            <h3>Multi-Shields <span id="lvl-multi" class="lvl-badge">1</span></h3>
+                            <p>Deploys additional orbiting shield modules for total coverage.</p>
+                        </div>
+                        <button class="btn btn-buy" id="btn-multi" onclick="buyUpgrade('multi')"><span id="cost-multi">300 F</span></button>
+                    </div>
+
                     <div class="upgrade-row" id="row-emp">
                         <div class="upgrade-info">
                             <h3>EMP Generator <span id="lvl-emp" class="lvl-badge">0</span></h3>
@@ -549,7 +565,7 @@
                         <button class="btn btn-buy" id="btn-emp" onclick="buyUpgrade('emp')"><span id="cost-emp">100 F</span></button>
                     </div>
 
-                    <div class="p-8 text-center text-gray-500 text-sm font-bold italic opacity-60">Units automatically redeploy every mission cycle.</div>
+                    <div class="p-8 text-center text-gray-500 text-sm font-bold italic opacity-60">1 Barricade regenerates per wave. Upgrade supply to increase.</div>
                 </div>
             </div>
 
@@ -575,67 +591,79 @@
 
             <!-- Game Over -->
             <div id="game-over" class="hidden">
-                <h1 class="text-3xl font-black text-red-500 mb-1">BREACHED</h1>
-                <p class="text-gray-400 text-xs font-bold mb-6">WAVE REGRESSION ACTIVE</p>
-                <div class="mb-6">
-                    <div class="text-xl font-black">EARNED: <span id="final-score" class="flux-text">0</span></div>
-                    <div class="text-xs text-gray-500 font-bold">Retrying Wave <span id="restart-wave-num">1</span></div>
-                </div>
-                
-                <div id="submit-status" class="text-xs font-bold h-4 mb-4"></div>
+            <h1 class="text-3xl font-black text-red-500 mb-1">BREACHED</h1>
+            <p class="text-gray-400 text-xs font-bold mb-6">WAVE REGRESSION ACTIVE</p>
+            <div class="mb-6">
+                <div class="text-xl font-black">EARNED: <span id="final-score" class="flux-text">0</span></div>
+                <div class="text-xs text-gray-500 font-bold">Retrying Wave <span id="restart-wave-num">1</span></div>
+            </div>
+            
+            <div id="submit-status" class="text-xs font-bold h-4 mb-4"></div>
 
-                <div class="flex flex-col gap-3">
-                    <button class="btn" onclick="startGame(true)">RETRY</button>
-                    <button class="btn btn-secondary text-sm" onclick="toggleModal('shop', true)">UPGRADES</button>
-                    <button class="btn btn-secondary text-sm" onclick="toggleModal('leaderboard-modal', true)">LEADERBOARD</button>
-                    <div class="flex flex-col gap-2">
-                        <button class="btn btn-secondary text-sm" id="btn-open-shop-breached" onclick="toggleModal('barricade-shop', true)">SHOP</button>
-                        <div id="unlock-instruction-breached" class="unlock-hint">Upgrade Health to unlock</div>
-                    </div>
-                    <button class="btn btn-secondary text-sm !border-gray-500 !text-gray-400" onclick="toggleModal('menu', true)">HOME</button>
+            <div class="flex flex-col gap-3">
+                <button class="btn" onclick="startGame(true)">RETRY</button>
+                <button class="btn btn-secondary text-sm" onclick="toggleModal('shop', true)">UPGRADES</button>
+                <button class="btn btn-secondary text-sm" onclick="toggleModal('leaderboard-modal', true)">LEADERBOARD</button>
+                <div class="flex flex-col gap-2">
+                    <button class="btn btn-secondary text-sm" id="btn-open-shop-breached" onclick="toggleModal('barricade-shop', true)">SHOP</button>
+                    <div id="unlock-instruction-breached" class="unlock-hint">Upgrade Health to unlock</div>
                 </div>
+                <button class="btn btn-secondary text-sm !border-gray-500 !text-gray-400" onclick="toggleModal('menu', true)">HOME</button>
             </div>
         </div>
     </div>
+</div>
 
-    <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
-        import { getFirestore, collection, addDoc, getDocs, serverTimestamp, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+<script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+    import { getFirestore, collection, addDoc, getDocs, serverTimestamp, doc, setDoc, getDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
-        // Intelligently check for both stringified JSON and pre-parsed objects
-        let firebaseConfig = {};
+    // Intelligently check for both stringified JSON and pre-parsed objects
+    let firebaseConfig = null;
+    try {
+        if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+            firebaseConfig = typeof __firebase_config === 'object' ? __firebase_config : JSON.parse(__firebase_config);
+        }
+    } catch(e) { console.warn("Invalid config. Falling back securely.", e); }
+    
+    // ---> GITHUB PAGES BACKEND SETUP <---
+    // When hosting outside of this editor, you must provide your own Firebase connection.
+    // Uncomment the lines below and paste your own keys from firebase.google.com!
+    if (!firebaseConfig) {
+        firebaseConfig = {
+            apiKey: "AIzaSyDyhaiIisSGUPXdgnpz64srK-NUUTqmCSs",
+            authDomain: "neon-defence-leaderboard.firebaseapp.com",
+            projectId: "neon-defence-leaderboard",
+            storageBucket: "neon-defence-leaderboard.firebasestorage.app",
+            messagingSenderId: "204867567100",
+            appId: "1:204867567100:web:e48cd8a81d258c8a778679",
+            measurementId: "G-0WPQP5PM95"
+        };
+    }
+    
+    const appId = (typeof __app_id !== 'undefined' && __app_id) ? __app_id : 'neon-defence-github-edition';
+
+    let app, auth, db;
+    let isOfflineMode = false;
+    let authReady = false;
+
+    if (firebaseConfig && firebaseConfig.projectId) {
         try {
-            if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-                if (typeof __firebase_config === 'object') {
-                    firebaseConfig = __firebase_config;
-                } else {
-                    firebaseConfig = JSON.parse(__firebase_config);
-                }
-            }
-        } catch(e) { console.warn("Invalid config. Falling back securely.", e); }
-        
-        const appId = (typeof __app_id !== 'undefined' && __app_id) ? __app_id : 'default-app-id';
+            app = initializeApp(firebaseConfig); auth = getAuth(app); db = getFirestore(app);
+        } catch (e) { isOfflineMode = true; }
+    } else { isOfflineMode = true; }
 
-        let app, auth, db;
-        let isOfflineMode = false;
-        let authReady = false;
-
-        if (firebaseConfig && firebaseConfig.projectId) {
-            try {
-                app = initializeApp(firebaseConfig); auth = getAuth(app); db = getFirestore(app);
-            } catch (e) { isOfflineMode = true; }
-        } else { isOfflineMode = true; }
-
-        let currentUser = null;
+    let currentUser = null;
         let isGuest = false;
         let currentUsername = null;
         let currentPassword = null;
+        let leaderboardUnsubscribe = null;
 
         const STORAGE_KEY = 'neonDefenceDataV22_Restart';
         let saveData = { 
             currentWave: 1, flux: 0, barricadeTotal: 0, 
-            upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0}, 
+            upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0, healthRegen: 0, barricadeRegen: 0}, 
             leaderboard: [], lifetimeFlux: 0, playtime: 0,
             bossesDefeated: 0, maxPerfectWave: 0, barricadesBuilt: 0, fastestWaveTime: 9999
         };
@@ -674,6 +702,7 @@
         let rotation = 0;
         let rotationDir = 1;
         let currentRunFlux = 0;
+        let currentActiveBarricades = 0;
         let enemies = [];
         let bosses = [];
         let particles = [];
@@ -834,7 +863,8 @@
             if (action === 'guest') {
                 isGuest = true; currentUsername = null; currentPassword = null;
                 // Generate a fresh, blank save state for the ephemeral session
-                saveData = { currentWave: 1, flux: 10000, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0}, leaderboard: [], lifetimeFlux: 0, playtime: 0, bossesDefeated: 0, maxPerfectWave: 0, barricadesBuilt: 0, fastestWaveTime: 9999 };
+                saveData = { currentWave: 1, flux: 10000, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0, healthRegen: 0, barricadeRegen: 0}, leaderboard: [], lifetimeFlux: 0, playtime: 0, bossesDefeated: 0, maxPerfectWave: 0, barricadesBuilt: 0, fastestWaveTime: 9999 };
+                currentActiveBarricades = saveData.barricadeTotal;
                 authModal.classList.add('hidden'); signOutBtn.classList.remove('hidden'); menu.classList.remove('hidden');
                 updateUI(); return;
             }
@@ -873,7 +903,9 @@
                         if (rememberMe) { localStorage.setItem('neonUsername', currentUsername); localStorage.setItem('neonPassword', currentPassword); } 
                         else { localStorage.removeItem('neonUsername'); localStorage.removeItem('neonPassword'); }
                         
-                        saveData = localProfiles[usernameInput].saveData || { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0}, leaderboard: [] };
+                        saveData = localProfiles[usernameInput].saveData || { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0, healthRegen: 0, barricadeRegen: 0}, leaderboard: [] };
+                        if(!saveData.upgrades) saveData.upgrades = {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0, healthRegen: 0, barricadeRegen: 0};
+                        currentActiveBarricades = saveData.barricadeTotal;
                         localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
                         errEl.className = "text-xs text-green-400 font-bold h-4"; errEl.innerText = `WELCOME BACK, ${currentUsername}!`;
                         
@@ -884,7 +916,8 @@
                         if (rememberMe) { localStorage.setItem('neonUsername', currentUsername); localStorage.setItem('neonPassword', currentPassword); } 
                         else { localStorage.removeItem('neonUsername'); localStorage.removeItem('neonPassword'); }
                         
-                        saveData = { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0}, leaderboard: [] };
+                        saveData = { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0, healthRegen: 0, barricadeRegen: 0}, leaderboard: [] };
+                        currentActiveBarricades = saveData.barricadeTotal;
                         localProfiles[usernameInput] = { password: currentPassword, saveData: saveData };
                         localStorage.setItem('neon_emulated_profiles', JSON.stringify(localProfiles));
                         localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
@@ -906,9 +939,10 @@
                         if (rememberMe) { localStorage.setItem('neonUsername', currentUsername); localStorage.setItem('neonPassword', currentPassword); } 
                         else { localStorage.removeItem('neonUsername'); localStorage.removeItem('neonPassword'); }
                         
-                        saveData = data.saveData || { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0}, leaderboard: [] };
-                        if(!saveData.upgrades) saveData.upgrades = {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0};
+                        saveData = data.saveData || { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0, healthRegen: 0, barricadeRegen: 0}, leaderboard: [] };
+                        if(!saveData.upgrades) saveData.upgrades = {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0, healthRegen: 0, barricadeRegen: 0};
                         if(!saveData.leaderboard) saveData.leaderboard = [];
+                        currentActiveBarricades = saveData.barricadeTotal;
                         localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
                         
                         errEl.className = "text-xs text-green-400 font-bold h-4"; errEl.innerText = `WELCOME BACK, ${currentUsername}!`;
@@ -919,7 +953,8 @@
                         if (rememberMe) { localStorage.setItem('neonUsername', currentUsername); localStorage.setItem('neonPassword', currentPassword); } 
                         else { localStorage.removeItem('neonUsername'); localStorage.removeItem('neonPassword'); }
                         
-                        saveData = { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0}, leaderboard: [] };
+                        saveData = { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0, healthRegen: 0, barricadeRegen: 0}, leaderboard: [] };
+                        currentActiveBarricades = saveData.barricadeTotal;
                         await setDoc(saveRef, { password: currentPassword, saveData: saveData });
                         localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
                         
@@ -935,7 +970,8 @@
         async function handleSignOut() {
             currentUsername = null; currentPassword = null; isGuest = false;
             localStorage.removeItem('neonUsername'); localStorage.removeItem('neonPassword');
-            saveData = { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0}, leaderboard: [] };
+            saveData = { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0, healthRegen: 0, barricadeRegen: 0}, leaderboard: [] };
+            currentActiveBarricades = 0;
             localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
             menu.classList.add('hidden'); authModal.classList.remove('hidden');
             document.getElementById('auth-username').value = ''; document.getElementById('auth-password').value = '';
@@ -1088,12 +1124,12 @@
 
             if (saveData.barricadeTotal > 0) { 
                 barricadeIndicator.classList.remove('hidden'); 
-                activeBarricadeCountEl.innerText = barricadeUnits.filter(b => b.active).length; 
+                activeBarricadeCountEl.innerText = currentActiveBarricades; 
             } else { 
                 barricadeIndicator.classList.add('hidden'); 
             }
 
-            const up = saveData.upgrades || {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0};
+            const up = saveData.upgrades || {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0, healthRegen: 0, barricadeRegen: 0};
             
             document.getElementById('lvl-width').innerText = up.width; 
             document.getElementById('cost-width').innerText = up.width >= 5 ? 'MAX' : (up.width * 15) + ' F';
@@ -1115,6 +1151,14 @@
             document.getElementById('lvl-empCooldown').innerText = empCdLv; 
             document.getElementById('cost-empCooldown').innerText = empCdLv >= 5 ? 'MAX' : (50 + (empCdLv * 25)) + ' F';
 
+            let hRegenLv = up.healthRegen || 0;
+            document.getElementById('lvl-healthRegen').innerText = hRegenLv; 
+            document.getElementById('cost-healthRegen').innerText = hRegenLv >= 3 ? 'MAX' : ((hRegenLv + 1) * 100) + ' F';
+
+            let bRegenLv = up.barricadeRegen || 0;
+            document.getElementById('lvl-barricadeRegen').innerText = bRegenLv; 
+            document.getElementById('cost-barricadeRegen').innerText = bRegenLv >= 5 ? 'MAX' : ((bRegenLv + 1) * 45) + ' F';
+
             const checkLock = (id, condition) => {
                 const row = document.getElementById(`row-${id}`);
                 if (row) {
@@ -1131,6 +1175,8 @@
             checkLock('multi', up.width >= 3);
             checkLock('emp', up.health >= 1);
             checkLock('empCooldown', empLv >= 1);
+            checkLock('healthRegen', up.health >= 1);
+            checkLock('barricadeRegen', saveData.barricadeTotal >= 1);
 
             const isShopUnlocked = up.health >= 1;
             const bShopBtnMenu = document.getElementById('btn-open-barricade-shop');
@@ -1194,17 +1240,11 @@
             const list = document.getElementById('leaderboard-list');
             if (isGuest) { list.innerHTML = '<div class="text-gray-500 italic text-center mt-10 font-bold">Leaderboard disabled in Offline Mode.</div>'; return; }
             if (!authReady || (!isOfflineMode && !auth.currentUser)) { list.innerHTML = '<div class="text-red-500 italic text-center mt-10 font-bold">Network not ready. Please wait.</div>'; return; }
-            list.innerHTML = '<div class="text-gray-500 italic text-center mt-10 font-bold animate-pulse">Syncing...</div>';
             
-            try {
-                let scores = [];
-                if (isOfflineMode) { scores = JSON.parse(localStorage.getItem('neon_emulated_leaderboard') || '[]'); } 
-                else {
-                    const lbCollection = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
-                    const snapshot = await getDocs(lbCollection);
-                    snapshot.forEach(doc => { scores.push(doc.data()); });
-                }
+            // Clean up any old listeners before creating a new one
+            if (leaderboardUnsubscribe) { leaderboardUnsubscribe(); leaderboardUnsubscribe = null; }
 
+            const renderData = (scores) => {
                 if (tab === 'wave') scores.sort((a, b) => (b.wave - a.wave) || (b.flux - a.flux));
                 else if (tab === 'flux') scores.sort((a, b) => (b.lifetimeFlux || 0) - (a.lifetimeFlux || 0));
                 else if (tab === 'time') scores.sort((a, b) => (b.playtime || 0) - (a.playtime || 0));
@@ -1252,7 +1292,23 @@
                     `;
                     list.appendChild(row);
                 });
-            } catch (e) { list.innerHTML = '<div class="text-red-500 italic text-center mt-10 font-bold">Connection failed.</div>'; }
+            };
+
+            if (isOfflineMode) {
+                let scores = JSON.parse(localStorage.getItem('neon_emulated_leaderboard') || '[]');
+                renderData(scores);
+            } else {
+                list.innerHTML = '<div class="text-gray-500 italic text-center mt-10 font-bold animate-pulse">Syncing Network...</div>';
+                const lbCollection = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
+                leaderboardUnsubscribe = onSnapshot(lbCollection, (snapshot) => {
+                    let scores = [];
+                    snapshot.forEach(doc => { scores.push(doc.data()); });
+                    renderData(scores);
+                }, (error) => {
+                    console.error("Leaderboard Sync Error:", error);
+                    list.innerHTML = '<div class="text-red-500 italic text-center mt-10 font-bold">Network sync interrupted.</div>';
+                });
+            }
         }
 
         async function submitGlobalScore() {
@@ -1299,6 +1355,12 @@
             menu.classList.add('hidden'); gameOverScreen.classList.add('hidden'); shopModal.classList.add('hidden');
             barricadeShopModal.classList.add('hidden'); pauseMenu.classList.add('hidden'); leaderboardModal.classList.add('hidden');
             
+            // Clean up real-time listener if closing leaderboard to save memory
+            if (id !== 'leaderboard-modal' && leaderboardUnsubscribe) {
+                leaderboardUnsubscribe();
+                leaderboardUnsubscribe = null;
+            }
+            
             if (id === 'pause-menu') pauseMenu.classList.remove('hidden');
             else if (id === 'menu') { currentBaseScreen = 'menu'; menu.classList.remove('hidden'); } 
             else if (id === 'game-over') { currentBaseScreen = 'game-over'; gameOverScreen.classList.remove('hidden'); } 
@@ -1317,6 +1379,8 @@
             if (type === 'health') { cost = (up.health + 1) * 75; max = 5; }
             if (type === 'emp') { cost = 100; max = 1; }
             if (type === 'empCooldown') { cost = 50 + ((up.empCooldown || 0) * 25); max = 5; }
+            if (type === 'healthRegen') { cost = ((up.healthRegen || 0) + 1) * 100; max = 3; }
+            if (type === 'barricadeRegen') { cost = ((up.barricadeRegen || 0) + 1) * 45; max = 5; }
             
             up[type] = up[type] || 0;
             
@@ -1326,7 +1390,10 @@
         function buyBarricade() {
             const cost = 5 + (saveData.barricadeTotal * 5);
             if (saveData.barricadeTotal < 10 && saveData.flux >= cost) {
-                saveData.flux -= cost; saveData.barricadeTotal++; saveData.barricadesBuilt = (saveData.barricadesBuilt || 0) + 1; saveGame();
+                saveData.flux -= cost; saveData.barricadeTotal++; saveData.barricadesBuilt = (saveData.barricadesBuilt || 0) + 1; 
+                currentActiveBarricades++;
+                saveGame();
+                if (gameActive) setupBarricades();
             }
         }
 
@@ -1349,20 +1416,21 @@
             maxHealth = 5 + saveData.upgrades.health;
             empMax = 100 - ((saveData.upgrades.empCooldown || 0) * 10);
             
-            if (fullHeal) { currentHealth = maxHealth; empCharge = 0; }
+            if (fullHeal) { currentHealth = maxHealth; empCharge = 0; currentActiveBarricades = saveData.barricadeTotal; }
             updateEMPUI();
             
             setupBarricades();
             toggleModal('none', false); pauseBtn.classList.remove('hidden');
             scoreEl.innerText = '0'; waveDisplay.innerText = `WAVE ${saveData.currentWave}`;
             
-            if (saveData.barricadeTotal > 0) { barricadeIndicator.classList.remove('hidden'); activeBarricadeCountEl.innerText = barricadeUnits.filter(b => b.active).length; } 
+            if (saveData.barricadeTotal > 0) { barricadeIndicator.classList.remove('hidden'); activeBarricadeCountEl.innerText = currentActiveBarricades; } 
             else { barricadeIndicator.classList.add('hidden'); }
             renderHealth();
         }
 
         function setupBarricades() {
             barricadeUnits = []; let attempts = 0; const minDistanceBetween = 55; 
+            let activeToAssign = currentActiveBarricades;
             while (barricadeUnits.length < saveData.barricadeTotal && attempts < 1000) {
                 attempts++;
                 const angle = Math.random() * Math.PI * 2;
@@ -1373,7 +1441,11 @@
                     const ex = centerX + Math.cos(b.angle) * b.dist; const ey = centerY + Math.sin(b.angle) * b.dist;
                     if (Math.sqrt((bx - ex)**2 + (by - ey)**2) < minDistanceBetween) { tooClose = true; break; }
                 }
-                if (!tooClose) barricadeUnits.push({ angle: angle, dist: dist, active: true, size: 22 });
+                if (!tooClose) { 
+                    let isActive = activeToAssign > 0;
+                    barricadeUnits.push({ angle: angle, dist: dist, active: isActive, size: 22 }); 
+                    if (isActive) activeToAssign--;
+                }
             }
         }
 
@@ -1382,7 +1454,13 @@
             if (!hasTakenDamageThisWave) saveData.maxPerfectWave = Math.max(saveData.maxPerfectWave || 0, saveData.currentWave);
             if (!isBossWave && currentWaveTime > 0) saveData.fastestWaveTime = Math.min(saveData.fastestWaveTime || 9999, currentWaveTime);
             
-            currentHealth = Math.min(currentHealth + 1, maxHealth); saveData.currentWave++; saveGame();
+            let regenH = 1 + (saveData.upgrades.healthRegen || 0);
+            currentHealth = Math.min(currentHealth + regenH, maxHealth); 
+            
+            let regenB = 1 + (saveData.upgrades.barricadeRegen || 0);
+            currentActiveBarricades = Math.min(saveData.barricadeTotal, currentActiveBarricades + regenB);
+
+            saveData.currentWave++; saveGame();
             waveMsg.innerText = `WAVE ${saveData.currentWave - 1} SECURED`; waveMsg.classList.add('show');
             setTimeout(() => { waveMsg.classList.remove('show'); if (saveData.currentWave > 0) startGame(false); }, 1200);
         }
@@ -1525,9 +1603,13 @@
                             const bx = centerX + Math.cos(b.angle) * b.dist; const by = centerY + Math.sin(b.angle) * b.dist;
                             if (Math.sqrt((this.x - bx)**2 + (this.y - by)**2) < 25) {
                                 playSound('hit');
-                                if (this.type === 'bouncer' && this.hp > 1) { this.hp = 1; this.state = 'rebounding'; this.isImmortal = true; this.reboundTicks = 60; b.active = false; activeBarricadeCountEl.innerText = barricadeUnits.filter(u => u.active).length; createExplosion(this.x, this.y, '#fff', 12); shakeAmount = 10; return true; } 
-                                else {
-                                    b.active = false; activeBarricadeCountEl.innerText = barricadeUnits.filter(u => u.active).length; shakeAmount = 12; createExplosion(this.x, this.y, '#fff', 18);
+                                if (this.type === 'bouncer' && this.hp > 1) { 
+                                    this.hp = 1; this.state = 'rebounding'; this.isImmortal = true; this.reboundTicks = 60; 
+                                    b.active = false; currentActiveBarricades--; activeBarricadeCountEl.innerText = currentActiveBarricades; 
+                                    createExplosion(this.x, this.y, '#fff', 12); shakeAmount = 10; return true; 
+                                } else {
+                                    b.active = false; currentActiveBarricades--; activeBarricadeCountEl.innerText = currentActiveBarricades; 
+                                    shakeAmount = 12; createExplosion(this.x, this.y, '#fff', 18);
                                     if (!isBossWave) { enemiesDestroyedInWave++; waveProgress.innerText = `DESTROYED: ${enemiesDestroyedInWave} / ${totalEnemiesToDestroy}`; addEMPCharge(5); }
                                     return false;
                                 }
@@ -1593,7 +1675,12 @@
         // Draw wood-coloured blockades for the Barricades
         function drawBarricades() {
             barricadeUnits.forEach(b => {
-                if (!b.active) return; const bx = centerX + Math.cos(b.angle) * b.dist; const by = centerY + Math.sin(b.angle) * b.dist;
+                const bx = centerX + Math.cos(b.angle) * b.dist; const by = centerY + Math.sin(b.angle) * b.dist;
+                if (!b.active) {
+                    ctx.fillStyle = "rgba(205, 133, 63, 0.2)"; ctx.fillRect(bx - b.size/2, by - b.size/2, b.size, b.size);
+                    ctx.strokeStyle = "rgba(0,0,0,0.3)"; ctx.lineWidth = 2; const s = b.size * 0.35; ctx.beginPath(); ctx.moveTo(bx, by - s); ctx.lineTo(bx, by + s); ctx.moveTo(bx - s, by); ctx.lineTo(bx + s, by); ctx.stroke();
+                    return;
+                }
                 ctx.fillStyle = "#CD853F"; ctx.shadowBlur = 8; ctx.shadowColor = "rgba(0,0,0,0.5)"; ctx.fillRect(bx - b.size/2, by - b.size/2, b.size, b.size);
                 ctx.strokeStyle = "#000"; ctx.lineWidth = 3; const s = b.size * 0.35; ctx.beginPath(); ctx.moveTo(bx, by - s); ctx.lineTo(bx, by + s); ctx.moveTo(bx - s, by); ctx.lineTo(bx + s, by); ctx.stroke(); ctx.shadowBlur = 0;
             });

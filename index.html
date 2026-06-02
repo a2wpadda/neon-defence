@@ -192,11 +192,13 @@
             overflow-y: auto;
             flex-grow: 1;
             padding-right: 12px;
+            padding-left: 4px;
             display: flex;
             flex-direction: column;
             gap: 1.25rem;
+            width: 100%;
         }
-        .shop-scroll::-webkit-scrollbar { width: 6px; }
+        .shop-scroll::-webkit-scrollbar { width: 12px; }
         .shop-scroll::-webkit-scrollbar-track { background: rgba(0, 255, 255, 0.05); border-radius: 10px; }
         .shop-scroll::-webkit-scrollbar-thumb { background: #0ff; border-radius: 10px; box-shadow: inset 0 0 6px rgba(0,0,0,0.3); }
 
@@ -242,8 +244,10 @@
             border-left: 6px solid #0ff;
             overflow: hidden;
             transition: all 0.3s ease;
+            flex-shrink: 0;
         }
 
+        .upgrade-info { flex: 1; padding-right: 15px; }
         .upgrade-info h3 { font-weight: 900; font-size: 1.35rem; margin: 0; color: #fff; display: flex; align-items: center; gap: 12px; }
         .upgrade-info p { font-size: 0.95rem; color: #aaa; margin: 4px 0 0 0; line-height: 1.4; }
         .lvl-badge { font-size: 0.85rem; background: #0ff; color: #000; padding: 2px 8px; border-radius: 6px; font-weight: 900; }
@@ -383,6 +387,7 @@
                     <div id="score-display">0</div>
                     <div id="health-bar"></div>
                     <div id="emp-bar-container" class="hidden"><div id="emp-bar-fill"></div></div>
+                    <div id="emp-loading-text" class="hidden text-[0.6rem] text-[#0ff] font-bold uppercase tracking-widest mt-1 text-left animate-pulse">EMP LOADING</div>
                 </div>
                 
                 <div id="wave-container">
@@ -472,7 +477,7 @@
                             <h3>Shield Span <span id="lvl-width" class="lvl-badge">1</span></h3>
                             <p>Extends the defensive arc, covering more of the core's perimeter.</p>
                         </div>
-                        <button class="btn btn-buy" onclick="buyUpgrade('width')"><span id="cost-width">15</span> F</button>
+                        <button class="btn btn-buy" onclick="buyUpgrade('width')"><span id="cost-width">15 F</span></button>
                     </div>
 
                     <div class="upgrade-row" id="row-speed">
@@ -480,7 +485,7 @@
                             <h3>Rotation Speed <span id="lvl-speed" class="lvl-badge">1</span></h3>
                             <p>Increases kinetic rotation for faster intercept timing.</p>
                         </div>
-                        <button class="btn btn-buy" id="btn-speed" onclick="buyUpgrade('speed')"><span id="cost-speed">25</span> F</button>
+                        <button class="btn btn-buy" id="btn-speed" onclick="buyUpgrade('speed')"><span id="cost-speed">25 F</span></button>
                     </div>
 
                     <div class="upgrade-row" id="row-health">
@@ -488,7 +493,7 @@
                             <h3>Health <span id="lvl-health" class="lvl-badge">0</span></h3>
                             <p>Reinforces core structure. Unlocks the Perimeter Shop.</p>
                         </div>
-                        <button class="btn btn-buy" id="btn-health" onclick="buyUpgrade('health')"><span id="cost-health">75</span> F</button>
+                        <button class="btn btn-buy" id="btn-health" onclick="buyUpgrade('health')"><span id="cost-health">75 F</span></button>
                     </div>
 
                     <div class="upgrade-row" id="row-multi">
@@ -496,15 +501,7 @@
                             <h3>Multi-Shields <span id="lvl-multi" class="lvl-badge">1</span></h3>
                             <p>Deploys additional orbiting shield modules for total coverage.</p>
                         </div>
-                        <button class="btn btn-buy" id="btn-multi" onclick="buyUpgrade('multi')"><span id="cost-multi">750</span> F</button>
-                    </div>
-
-                    <div class="upgrade-row" id="row-emp">
-                        <div class="upgrade-info">
-                            <h3>EMP Generator <span id="lvl-emp" class="lvl-badge">0</span></h3>
-                            <p>Unlocks the devastating screen-clearing Electromagnetic Pulse.</p>
-                        </div>
-                        <button class="btn btn-buy" id="btn-emp" onclick="buyUpgrade('emp')"><span id="cost-emp">100</span> F</button>
+                        <button class="btn btn-buy" id="btn-multi" onclick="buyUpgrade('multi')"><span id="cost-multi">300 F</span></button>
                     </div>
 
                     <div class="upgrade-row" id="row-empCooldown">
@@ -512,7 +509,7 @@
                             <h3>EMP Cooldown <span id="lvl-empCooldown" class="lvl-badge">0</span></h3>
                             <p>Reduces the charge required to trigger the EMP.</p>
                         </div>
-                        <button class="btn btn-buy" id="btn-empCooldown" onclick="buyUpgrade('empCooldown')"><span id="cost-empCooldown">50</span> F</button>
+                        <button class="btn btn-buy" id="btn-empCooldown" onclick="buyUpgrade('empCooldown')"><span id="cost-empCooldown">50 F</span></button>
                     </div>
                 </div>
             </div>
@@ -536,6 +533,15 @@
                         </div>
                         <button class="btn btn-buy" id="btn-buy-barricade" onclick="buyBarricade()">5 F</button>
                     </div>
+
+                    <div class="upgrade-row" id="row-emp">
+                        <div class="upgrade-info">
+                            <h3>EMP Generator <span id="lvl-emp" class="lvl-badge">0</span></h3>
+                            <p>Unlocks the devastating screen-clearing Electromagnetic Pulse.</p>
+                        </div>
+                        <button class="btn btn-buy" id="btn-emp" onclick="buyUpgrade('emp')"><span id="cost-emp">100 F</span></button>
+                    </div>
+
                     <div class="p-8 text-center text-gray-500 text-sm font-bold italic opacity-60">Units automatically redeploy every mission cycle.</div>
                 </div>
             </div>
@@ -888,6 +894,7 @@
         function updateEMPUI() {
             if (!saveData.upgrades.emp) {
                 document.getElementById('emp-bar-container').classList.add('hidden');
+                document.getElementById('emp-loading-text').classList.add('hidden');
                 btnEmpMobile.classList.add('hidden');
                 return;
             }
@@ -897,10 +904,12 @@
                 empBarFill.style.background = '#fff';
                 empBarFill.style.boxShadow = '0 0 15px #fff';
                 btnEmpMobile.classList.remove('hidden');
+                document.getElementById('emp-loading-text').classList.add('hidden');
             } else {
                 empBarFill.style.background = '#0ff';
                 empBarFill.style.boxShadow = '0 0 8px #0ff';
                 btnEmpMobile.classList.add('hidden');
+                document.getElementById('emp-loading-text').classList.remove('hidden');
             }
         }
 
@@ -985,31 +994,56 @@
             if (isPaused) { toggleModal('pause-menu', true); } else { toggleModal('none', false); }
         }
 
+        let currentLeaderboardTab = 'wave';
+
         function updateUI() {
-            saveData.lifetimeFlux = saveData.lifetimeFlux || 0; saveData.playtime = saveData.playtime || 0;
-            fluxEl.innerText = saveData.flux; shopFluxEl.innerText = saveData.flux; bShopFluxEl.innerText = saveData.flux;
+            saveData.lifetimeFlux = saveData.lifetimeFlux || 0; 
+            saveData.playtime = saveData.playtime || 0;
+            
+            fluxEl.innerText = saveData.flux; 
+            shopFluxEl.innerText = saveData.flux; 
+            bShopFluxEl.innerText = saveData.flux;
             ownedBarricadesBadge.innerText = `${saveData.barricadeTotal} / 10`;
             document.getElementById('start-wave-num').innerText = saveData.currentWave;
             
-            if (isGuest) { signOutBtn.innerText = "CONNECT PROFILE"; signOutBtn.classList.remove('text-red-500'); signOutBtn.classList.add('text-cyan-400'); } 
-            else { signOutBtn.innerText = "DISCONNECT PROFILE"; signOutBtn.classList.remove('text-cyan-400'); signOutBtn.classList.add('text-red-500'); }
+            if (isGuest) { 
+                signOutBtn.innerText = "CONNECT PROFILE"; 
+                signOutBtn.classList.remove('text-red-500'); 
+                signOutBtn.classList.add('text-cyan-400'); 
+            } else { 
+                signOutBtn.innerText = "DISCONNECT PROFILE"; 
+                signOutBtn.classList.remove('text-cyan-400'); 
+                signOutBtn.classList.add('text-red-500'); 
+            }
 
-            if (saveData.barricadeTotal > 0) { barricadeIndicator.classList.remove('hidden'); activeBarricadeCountEl.innerText = barricadeUnits.filter(b => b.active).length; } 
-            else { barricadeIndicator.classList.add('hidden'); }
+            if (saveData.barricadeTotal > 0) { 
+                barricadeIndicator.classList.remove('hidden'); 
+                activeBarricadeCountEl.innerText = barricadeUnits.filter(b => b.active).length; 
+            } else { 
+                barricadeIndicator.classList.add('hidden'); 
+            }
 
-            const up = saveData.upgrades;
-            document.getElementById('lvl-width').innerText = up.width; document.getElementById('cost-width').innerText = up.width >= 5 ? 'MAX' : up.width * 15;
-            document.getElementById('lvl-speed').innerText = up.speed; document.getElementById('cost-speed').innerText = up.speed >= 5 ? 'MAX' : up.speed * 25;
-            document.getElementById('lvl-health').innerText = up.health; document.getElementById('cost-health').innerText = up.health >= 5 ? 'MAX' : (up.health + 1) * 75;
-            document.getElementById('lvl-multi').innerText = up.multi; document.getElementById('cost-multi').innerText = up.multi === 1 ? 750 : (up.multi === 2 ? 2000 : 'MAX');
+            const up = saveData.upgrades || {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0};
+            
+            document.getElementById('lvl-width').innerText = up.width; 
+            document.getElementById('cost-width').innerText = up.width >= 5 ? 'MAX' : (up.width * 15) + ' F';
+            
+            document.getElementById('lvl-speed').innerText = up.speed; 
+            document.getElementById('cost-speed').innerText = up.speed >= 5 ? 'MAX' : (up.speed * 25) + ' F';
+            
+            document.getElementById('lvl-health').innerText = up.health; 
+            document.getElementById('cost-health').innerText = up.health >= 5 ? 'MAX' : ((up.health + 1) * 75) + ' F';
+            
+            document.getElementById('lvl-multi').innerText = up.multi; 
+            document.getElementById('cost-multi').innerText = up.multi === 1 ? '300 F' : (up.multi === 2 ? '550 F' : 'MAX');
             
             let empLv = up.emp || 0;
             document.getElementById('lvl-emp').innerText = empLv; 
-            document.getElementById('cost-emp').innerText = empLv >= 1 ? 'MAX' : 100;
+            document.getElementById('cost-emp').innerText = empLv >= 1 ? 'MAX' : '100 F';
             
             let empCdLv = up.empCooldown || 0;
             document.getElementById('lvl-empCooldown').innerText = empCdLv; 
-            document.getElementById('cost-empCooldown').innerText = empCdLv >= 5 ? 'MAX' : 50 + (empCdLv * 25);
+            document.getElementById('cost-empCooldown').innerText = empCdLv >= 5 ? 'MAX' : (50 + (empCdLv * 25)) + ' F';
 
             const checkLock = (id, condition) => {
                 const row = document.getElementById(`row-${id}`);
@@ -1025,8 +1059,8 @@
             checkLock('speed', up.width >= 2);
             checkLock('health', up.speed >= 2);
             checkLock('multi', up.width >= 3);
-            checkLock('emp', up.health >= 1); // Only show EMP once they buy Health
-            checkLock('empCooldown', (up.emp || 0) >= 1);
+            checkLock('emp', up.health >= 1);
+            checkLock('empCooldown', empLv >= 1);
 
             const isShopUnlocked = up.health >= 1;
             const bShopBtnMenu = document.getElementById('btn-open-barricade-shop');
@@ -1075,14 +1109,6 @@
                 }
             }
         }
-
-        function formatTime(seconds) {
-            if (!seconds) return "0m";
-            const h = Math.floor(seconds / 3600); const m = Math.floor((seconds % 3600) / 60);
-            return h > 0 ? `${h}h ${m}m` : `${m}m`;
-        }
-        
-        let currentLeaderboardTab = 'wave';
 
         async function renderLeaderboardUI(tab = currentLeaderboardTab) {
             currentLeaderboardTab = tab;
@@ -1209,7 +1235,7 @@
             const up = saveData.upgrades; let cost = 0; let max = 5;
             if (type === 'width') cost = up.width * 15;
             if (type === 'speed') cost = up.speed * 25;
-            if (type === 'multi') { cost = (up.multi === 1) ? 750 : 2000; max = 3; }
+            if (type === 'multi') { cost = (up.multi === 1) ? 300 : 550; max = 3; }
             if (type === 'health') { cost = (up.health + 1) * 75; max = 5; }
             if (type === 'emp') { cost = 100; max = 1; }
             if (type === 'empCooldown') { cost = 50 + ((up.empCooldown || 0) * 25); max = 5; }

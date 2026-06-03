@@ -704,6 +704,7 @@
         let currentRunFlux = 0;
         let currentActiveBarricades = 0;
         let enemies = [];
+        let enemiesToAdd = []; // Stores spawned fragments during active wave
         let bosses = [];
         let particles = [];
         let floatingTexts = [];
@@ -863,7 +864,7 @@
             if (action === 'guest') {
                 isGuest = true; currentUsername = null; currentPassword = null;
                 // Generate a fresh, blank save state for the ephemeral session
-                saveData = { currentWave: 1, flux: 10000, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0, healthRegen: 0, barricadeRegen: 0}, leaderboard: [], lifetimeFlux: 0, playtime: 0, bossesDefeated: 0, maxPerfectWave: 0, barricadesBuilt: 0, fastestWaveTime: 9999 };
+                saveData = { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0, healthRegen: 0, barricadeRegen: 0}, leaderboard: [], lifetimeFlux: 0, playtime: 0, bossesDefeated: 0, maxPerfectWave: 0, barricadesBuilt: 0, fastestWaveTime: 9999 };
                 currentActiveBarricades = saveData.barricadeTotal;
                 authModal.classList.add('hidden'); signOutBtn.classList.remove('hidden'); menu.classList.remove('hidden');
                 updateUI(); return;
@@ -1025,7 +1026,7 @@
             
             // Vaporize normal enemies
             enemies.forEach(e => {
-                const points = (e.type === 'stinger' ? 2 : (e.type === 'bouncer' ? 3 : 1));
+                const points = (e.type === 'phantom' ? 4 : (e.type === 'splitter' ? 5 : (e.type === 'bouncer' ? 3 : (e.type === 'stinger' ? 2 : 1))));
                 currentRunFlux += points;
                 saveData.lifetimeFlux += points;
                 floatingTexts.push(new FloatingText(e.x, e.y, `+${points} F`, '#fbbf24'));
@@ -1100,11 +1101,6 @@
         function updateUI() {
             saveData.lifetimeFlux = saveData.lifetimeFlux || 0; 
             saveData.playtime = saveData.playtime || 0;
-            
-            // Cheat Override: Auto-fill to 10,000 Flux
-            if (saveData.flux < 10000) {
-                saveData.flux = 10000;
-            }
             
             fluxEl.innerText = saveData.flux; 
             shopFluxEl.innerText = saveData.flux; 
@@ -1580,24 +1576,57 @@
         }
 
         class Enemy {
-            constructor() {
-                const angle = Math.random() * Math.PI * 2; const distance = Math.max(width, height) * 0.7; this.x = centerX + Math.cos(angle) * distance; this.y = centerY + Math.sin(angle) * distance; this.trail = []; 
-                const stingerChance = Math.min(0.4, (saveData.currentWave - 1) * 0.08); const bouncerChance = Math.min(0.3, Math.max(0, (saveData.currentWave - 2) * 0.12));
-                const rand = Math.random();
-                if (rand < bouncerChance) { this.type = 'bouncer'; this.hp = 2; this.state = 'attacking'; this.reboundTicks = 0; this.color = '#00ffff'; this.speed = 2.2 * difficulty; this.size = 14; this.isImmortal = false; } 
-                else if (rand < bouncerChance + stingerChance) { this.type = 'stinger'; this.color = '#ffff00'; this.speed = 4.5 * difficulty; this.size = 9; this.hp = 1; } 
-                else { this.type = 'normal'; this.color = '#ff0055'; this.speed = 3.0 * difficulty; this.size = 12; this.hp = 1; }
+            constructor(forceType = null, startX = null, startY = null, fragmentIndex = 0) {
+                this.trail = [];
+                if (forceType) {
+                    this.type = forceType;
+                    if (forceType === 'fragment') {
+                        const offsetAngle = (fragmentIndex * Math.PI * 2 / 3);
+                        this.x = startX + Math.cos(offsetAngle) * 15;
+                        this.y = startY + Math.sin(offsetAngle) * 15;
+                        this.color = '#ff8800'; this.speed = 4.2 * difficulty; this.size = 6; this.hp = 1; this.isImmortal = false; this.isPhased = false;
+                    }
+                } else {
+                    const angle = Math.random() * Math.PI * 2; const distance = Math.max(width, height) * 0.7; this.x = centerX + Math.cos(angle) * distance; this.y = centerY + Math.sin(angle) * distance; 
+                    
+                    // Wave progression math ensures specific units only appear after specific waves
+                    const stingerChance = Math.min(0.35, Math.max(0, (saveData.currentWave - 2) * 0.08)); // Starts at Wave 3
+                    const bouncerChance = Math.min(0.25, Math.max(0, (saveData.currentWave - 4) * 0.10)); // Starts at Wave 5
+                    const splitterChance = Math.min(0.20, Math.max(0, (saveData.currentWave - 7) * 0.08)); // Starts at Wave 8
+                    const phantomChance = Math.min(0.20, Math.max(0, (saveData.currentWave - 11) * 0.08)); // Starts at Wave 12
+                    
+                    const rand = Math.random();
+                    if (rand < phantomChance) {
+                        this.type = 'phantom'; this.color = '#a020f0'; this.speed = 1.6 * difficulty; this.size = 11; this.hp = 1; this.isPhased = false; this.phaseTimer = Math.floor(Math.random() * 100);
+                    } else if (rand < phantomChance + splitterChance) {
+                        this.type = 'splitter'; this.color = '#ff8800'; this.speed = 1.4 * difficulty; this.size = 18; this.hp = 1; this.isPhased = false; this.isImmortal = false;
+                    } else if (rand < phantomChance + splitterChance + bouncerChance) { 
+                        this.type = 'bouncer'; this.hp = 2; this.state = 'attacking'; this.reboundTicks = 0; this.color = '#00ffff'; this.speed = 2.2 * difficulty; this.size = 14; this.isImmortal = false; this.isPhased = false;
+                    } else if (rand < phantomChance + splitterChance + bouncerChance + stingerChance) { 
+                        this.type = 'stinger'; this.color = '#ffff00'; this.speed = 4.5 * difficulty; this.size = 9; this.hp = 1; this.isPhased = false; this.isImmortal = false;
+                    } else { 
+                        this.type = 'normal'; this.color = '#ff0055'; this.speed = 3.0 * difficulty; this.size = 12; this.hp = 1; this.isPhased = false; this.isImmortal = false;
+                    }
+                }
             }
             update() {
                 this.trail.push({ x: this.x, y: this.y }); if (this.trail.length > 6) this.trail.shift();
                 const dx = centerX - this.x; const dy = centerY - this.y; const dist = Math.sqrt(dx*dx + dy*dy);
+                
+                if (this.type === 'phantom') {
+                    this.phaseTimer++;
+                    this.isPhased = (this.phaseTimer % 160) < 80;
+                    if (dist < SHIELD_RADIUS + 40) this.isPhased = false; // Forced decloak near core
+                    this.color = this.isPhased ? 'rgba(160, 32, 240, 0.25)' : '#a020f0';
+                }
+
                 if (this.type === 'bouncer' && this.state === 'rebounding') {
                     const maxScreenDist = Math.min(width, height) * 0.48; if (dist < maxScreenDist) { this.x -= (dx / dist) * this.speed * 2.5; this.y -= (dy / dist) * this.speed * 2.5; }
                     this.reboundTicks--; if (this.reboundTicks <= 0) { this.state = 'attacking'; this.isImmortal = false; }
                     return true;
                 } else { this.x += (dx / dist) * this.speed; this.y += (dy / dist) * this.speed; }
 
-                if (!this.isImmortal) {
+                if (!this.isImmortal && !this.isPhased) {
                     for(let b of barricadeUnits) {
                         if (b.active) {
                             const bx = centerX + Math.cos(b.angle) * b.dist; const by = centerY + Math.sin(b.angle) * b.dist;
@@ -1610,6 +1639,7 @@
                                 } else {
                                     b.active = false; currentActiveBarricades--; activeBarricadeCountEl.innerText = currentActiveBarricades; 
                                     shakeAmount = 12; createExplosion(this.x, this.y, '#fff', 18);
+                                    if (this.type === 'splitter') { for(let k=0; k<3; k++) enemiesToAdd.push(new Enemy('fragment', this.x, this.y, k)); }
                                     if (!isBossWave) { enemiesDestroyedInWave++; waveProgress.innerText = `DESTROYED: ${enemiesDestroyedInWave} / ${totalEnemiesToDestroy}`; addEMPCharge(5); }
                                     return false;
                                 }
@@ -1618,7 +1648,7 @@
                     }
                 }
 
-                if (!this.isImmortal) {
+                if (!this.isImmortal && !this.isPhased) {
                     const currentAngle = Math.atan2(this.y - centerY, this.x - centerX); const normalizedEnemyAngle = ((currentAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
                     const arcWidth = 0.7 + (saveData.upgrades.width - 1) * 0.15; const shieldCount = saveData.upgrades.multi;
                     if (dist < SHIELD_RADIUS + 15 && dist > SHIELD_RADIUS - 15) {
@@ -1630,8 +1660,9 @@
                                 if (this.type === 'bouncer' && this.hp > 1) { this.hp = 1; this.state = 'rebounding'; this.isImmortal = true; this.reboundTicks = 60; createExplosion(this.x, this.y, this.color, 12); shakeAmount = 6; return true; } 
                                 else {
                                     playSound('ping');
-                                    const points = this.type === 'stinger' ? 2 : (this.type === 'bouncer' ? 3 : 1);
+                                    const points = this.type === 'phantom' ? 4 : (this.type === 'splitter' ? 3 : (this.type === 'bouncer' ? 3 : (this.type === 'stinger' ? 2 : 1)));
                                     currentRunFlux += points; saveData.lifetimeFlux += points; scoreEl.innerText = currentRunFlux;
+                                    if (this.type === 'splitter') { for(let k=0; k<3; k++) enemiesToAdd.push(new Enemy('fragment', this.x, this.y, k)); }
                                     floatingTexts.push(new FloatingText(this.x, this.y, `+${points} F`, '#fbbf24')); createExplosion(this.x, this.y, this.color, 15); shakeAmount = 5;
                                     if (!isBossWave) { enemiesDestroyedInWave++; waveProgress.innerText = `DESTROYED: ${enemiesDestroyedInWave} / ${totalEnemiesToDestroy}`; addEMPCharge(5); }
                                     return false;
@@ -1649,10 +1680,27 @@
                 return true;
             }
             draw() {
-                if (this.type === 'stinger' || this.type === 'bouncer') { this.trail.forEach((pos, index) => { ctx.globalAlpha = (index / this.trail.length) * 0.4; ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(pos.x, pos.y, this.size * 0.6, 0, Math.PI * 2); ctx.fill(); }); ctx.globalAlpha = 1.0; }
+                if (this.type === 'stinger' || this.type === 'bouncer' || this.type === 'phantom' || this.type === 'fragment') { this.trail.forEach((pos, index) => { ctx.globalAlpha = (index / this.trail.length) * 0.4; ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(pos.x, pos.y, this.size * 0.6, 0, Math.PI * 2); ctx.fill(); }); ctx.globalAlpha = 1.0; }
                 ctx.fillStyle = this.color; ctx.shadowBlur = 15; ctx.shadowColor = this.color; ctx.beginPath();
-                if (this.type === 'stinger') { const angle = Math.atan2(centerY - this.y, centerX - this.x); ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(angle); ctx.moveTo(10, 0); ctx.lineTo(-6, 6); ctx.lineTo(-6, -6); ctx.closePath(); ctx.fill(); ctx.restore(); } 
+                if (this.type === 'stinger' || this.type === 'fragment') { 
+                    const angle = Math.atan2(centerY - this.y, centerX - this.x); ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(angle); 
+                    ctx.moveTo(this.size * 1.1, 0); ctx.lineTo(-this.size * 0.7, this.size * 0.7); ctx.lineTo(-this.size * 0.7, -this.size * 0.7); 
+                    ctx.closePath(); ctx.fill(); ctx.restore(); 
+                } 
                 else if (this.type === 'bouncer') { ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); if (this.isImmortal) { ctx.strokeStyle = "#fff"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(this.x, this.y, this.size + 4, 0, Math.PI * 2); ctx.stroke(); } if (this.hp > 1) { ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(this.x, this.y, this.size/2.5, 0, Math.PI * 2); ctx.fill(); } } 
+                else if (this.type === 'phantom') { ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); if (this.isPhased) { ctx.strokeStyle = "rgba(160, 32, 240, 0.8)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(this.x, this.y, this.size + 6, 0, Math.PI * 2); ctx.stroke(); } }
+                else if (this.type === 'splitter') {
+                    ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(Date.now() * 0.0015);
+                    for (let i = 0; i < 6; i++) {
+                        const angle = (i * Math.PI * 2) / 6;
+                        const px = Math.cos(angle) * this.size;
+                        const py = Math.sin(angle) * this.size;
+                        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+                    }
+                    ctx.closePath(); ctx.fill();
+                    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, this.size/2.5, 0, Math.PI * 2); ctx.fill();
+                    ctx.restore();
+                }
                 else { ctx.rect(this.x - this.size/2, this.y - this.size/2, this.size, this.size); ctx.fill(); }
                 ctx.shadowBlur = 0;
             }
@@ -1733,7 +1781,10 @@
                     if (spawnTimer <= 0 && pendingDestruction > enemies.length && enemies.length < 5) { enemies.push(new Enemy()); spawnTimer = Math.max(300, 1000 - (difficulty * 80)); }
                 }
                 
-                enemies = enemies.filter(e => e.update()); bosses = bosses.filter(b => b.update());
+                enemiesToAdd = [];
+                enemies = enemies.filter(e => e.update());
+                if (enemiesToAdd.length > 0) enemies.push(...enemiesToAdd);
+                bosses = bosses.filter(b => b.update());
                 
                 if (isBossWave && bosses.length === 0) { enemies = []; onWaveClear(); } 
                 else if (!isBossWave && enemiesDestroyedInWave >= totalEnemiesToDestroy && enemies.length === 0) { onWaveClear(); }

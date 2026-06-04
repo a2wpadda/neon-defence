@@ -451,18 +451,16 @@
                 <div class="flex flex-col gap-3">
                     <button class="btn" onclick="handleStartClick()">START MISSION</button>
                     
-                    <div class="flex gap-2">
-                        <button class="btn btn-secondary text-sm flex-1" onclick="toggleModal('shop', true)">UPGRADES</button>
-                        <button class="btn btn-secondary text-sm flex-1" id="btn-open-barricade-shop" onclick="toggleModal('barricade-shop', true)">SHOP</button>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button class="btn btn-secondary text-sm" onclick="toggleModal('shop', true)">UPGRADES</button>
+                        <button class="btn btn-secondary text-sm" id="btn-open-barricade-shop" onclick="toggleModal('barricade-shop', true)">SHOP</button>
                     </div>
                     <div id="unlock-instruction" class="unlock-hint">Upgrade Health to unlock shop</div>
 
-                    <div class="flex gap-2">
-                        <button class="btn btn-secondary text-sm flex-1 !border-[#ff0055] !text-[#ff0055]" onclick="toggleModal('index-modal', true)">THREAT INDEX</button>
-                        <button class="btn btn-secondary text-sm flex-1" onclick="toggleModal('leaderboard-modal', true)">LEADERBOARD</button>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button class="btn btn-secondary text-xs sm:text-sm !border-[#ff0055] !text-[#ff0055] whitespace-nowrap overflow-hidden text-ellipsis" onclick="toggleModal('index-modal', true)">THREAT INDEX</button>
+                        <button class="btn btn-secondary text-xs sm:text-sm whitespace-nowrap overflow-hidden text-ellipsis" onclick="toggleModal('leaderboard-modal', true)">LEADERBOARD</button>
                     </div>
-                    
-                    <button class="btn btn-secondary text-sm !border-emerald-500 !text-emerald-400 mt-2" onclick="toggleModal('roadmap-modal', true)">UPDATE LOG & ROADMAP</button>
                 </div>
                 <!-- Sign Out Button -->
                 <button id="btn-signout" class="mt-6 text-xs text-red-500 font-bold tracking-widest uppercase underline hidden pointer-events-auto" onclick="handleSignOut()">Disconnect Profile</button>
@@ -553,8 +551,8 @@
             </div>
 
             <!-- Roadmap & Update Log Menu -->
-            <div id="roadmap-modal" class="hidden !border-emerald-500 !shadow-[0_0_100px_rgba(16,185,129,0.15)]">
-                <button class="btn-exit !text-emerald-500" style="text-shadow: 0 0 25px #10b981;" onclick="toggleModal('roadmap-modal', false)">×</button>
+            <div id="roadmap-modal" class="hidden !border-emerald-500 !shadow-[0_0_100px_rgba(16,185,129,0.15)]" onclick="if(event.target === this) closeRoadmap()">
+                <button class="btn-exit !text-emerald-500" style="text-shadow: 0 0 25px #10b981;" onclick="closeRoadmap()">×</button>
                 <div class="border-b-2 border-white/10 pb-4 mt-8 text-left flex-shrink-0">
                     <h1 class="modal-title !text-emerald-500" style="text-shadow: 0 0 15px #10b981;">PROJECT ROADMAP</h1>
                     <p class="text-gray-500 text-sm font-bold uppercase tracking-widest">Update Log & Threat Intelligence</p>
@@ -636,6 +634,8 @@
                             <div><strong class="text-white">Wave 95 - "The Doomsday" (Black with Red Aura)</strong><br><strong>Mechanic:</strong> Incredibly slow, but boasts a massive 15 HP. If this unit manages to touch the core, it deletes 50% of health unless its the player is at 1 hp where it deals the finishing blow.</div>
                         </div>
                     </div>
+                    
+                    <button id="btn-ack-roadmap" class="btn mt-4 !bg-emerald-500 !text-black hidden" onclick="closeRoadmap()">ACKNOWLEDGE & CONTINUE</button>
                 </div>
             </div>
 
@@ -840,14 +840,14 @@
     let currentPassword = null;
     let leaderboardUnsubscribe = null;
 
-    // GLOBAL WIPE: Pushed Storage Keys forward to completely reset all players.
-    const STORAGE_KEY = 'neonDefenceDataV24_Live';
+    // GLOBAL WIPE: Changed Collection targets and storage keys to enforce a true universal wipe
+    const STORAGE_KEY = 'neonDefenceDataV25_Live';
     let saveData = { 
         currentWave: 1, flux: 0, barricadeTotal: 0, 
         upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0, healthRegen: 0, barricadeRegen: 0}, 
         leaderboard: [], lifetimeFlux: 0, playtime: 0,
         bossesDefeated: 0, maxPerfectWave: 0, barricadesBuilt: 0, fastestWaveTime: 9999,
-        tutorialCompleted: false, highestWaveReached: 1
+        tutorialCompleted: false, highestWaveReached: 1, seenUpdateLogV1: false
     };
 
     const canvas = document.getElementById('gameCanvas');
@@ -1037,9 +1037,10 @@
         
         if (action === 'guest') {
             isGuest = true; currentUsername = null; currentPassword = null;
-            saveData = { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0, healthRegen: 0, barricadeRegen: 0}, leaderboard: [], lifetimeFlux: 0, playtime: 0, bossesDefeated: 0, maxPerfectWave: 0, barricadesBuilt: 0, fastestWaveTime: 9999, tutorialCompleted: false };
+            saveData = { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0, healthRegen: 0, barricadeRegen: 0}, leaderboard: [], lifetimeFlux: 0, playtime: 0, bossesDefeated: 0, maxPerfectWave: 0, barricadesBuilt: 0, fastestWaveTime: 9999, tutorialCompleted: false, seenUpdateLogV1: false };
             currentActiveBarricades = saveData.barricadeTotal;
-            authModal.classList.add('hidden'); signOutBtn.classList.remove('hidden'); menu.classList.remove('hidden');
+            authModal.classList.add('hidden'); signOutBtn.classList.remove('hidden'); 
+            checkUpdateLogPopup();
             updateUI(); return;
         }
 
@@ -1070,39 +1071,40 @@
         try {
             if (isOfflineMode) {
                 errEl.innerText = "CONNECTING LOCAL ENGINE...";
-                let localProfiles = JSON.parse(localStorage.getItem('neon_emulated_profiles') || '{}');
+                let localProfiles = JSON.parse(localStorage.getItem('neon_emulated_profiles_v2') || '{}');
                 if (localProfiles[usernameInput]) {
                     if (localProfiles[usernameInput].password !== passwordInput) throw new Error("INVALID PASSWORD.");
                     currentUsername = usernameInput; currentPassword = passwordInput;
                     if (rememberMe) { localStorage.setItem('neonUsername', currentUsername); localStorage.setItem('neonPassword', currentPassword); } 
                     else { localStorage.removeItem('neonUsername'); localStorage.removeItem('neonPassword'); }
                     
-                    saveData = localProfiles[usernameInput].saveData || { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0, healthRegen: 0, barricadeRegen: 0}, leaderboard: [], tutorialCompleted: false };
+                    saveData = localProfiles[usernameInput].saveData || { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0, healthRegen: 0, barricadeRegen: 0}, leaderboard: [], tutorialCompleted: false, seenUpdateLogV1: false };
                     if(!saveData.upgrades) saveData.upgrades = {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0, healthRegen: 0, barricadeRegen: 0};
                     currentActiveBarricades = saveData.barricadeTotal;
                     localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
                     errEl.className = "text-xs text-green-400 font-bold h-4"; errEl.innerText = `WELCOME BACK, ${currentUsername}!`;
                     
-                    setTimeout(() => { authModal.classList.add('hidden'); signOutBtn.classList.remove('hidden'); menu.classList.remove('hidden'); updateUI(); }, 700);
+                    setTimeout(() => { authModal.classList.add('hidden'); signOutBtn.classList.remove('hidden'); checkUpdateLogPopup(); updateUI(); }, 700);
                 } else {
                     errEl.innerText = "CREATING PROFILE LOCALLY...";
                     currentUsername = usernameInput; currentPassword = passwordInput;
                     if (rememberMe) { localStorage.setItem('neonUsername', currentUsername); localStorage.setItem('neonPassword', currentPassword); } 
                     else { localStorage.removeItem('neonUsername'); localStorage.removeItem('neonPassword'); }
                     
-                    saveData = { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0, healthRegen: 0, barricadeRegen: 0}, leaderboard: [], tutorialCompleted: false };
+                    saveData = { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0, healthRegen: 0, barricadeRegen: 0}, leaderboard: [], tutorialCompleted: false, seenUpdateLogV1: false };
                     currentActiveBarricades = saveData.barricadeTotal;
                     localProfiles[usernameInput] = { password: currentPassword, saveData: saveData };
-                    localStorage.setItem('neon_emulated_profiles', JSON.stringify(localProfiles));
+                    localStorage.setItem('neon_emulated_profiles_v2', JSON.stringify(localProfiles));
                     localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
                     errEl.className = "text-xs text-cyan-400 font-bold h-4"; errEl.innerText = `NEW PROFILE CREATED!`;
                     
-                    setTimeout(() => { authModal.classList.add('hidden'); signOutBtn.classList.remove('hidden'); menu.classList.remove('hidden'); updateUI(); }, 700);
+                    setTimeout(() => { authModal.classList.add('hidden'); signOutBtn.classList.remove('hidden'); checkUpdateLogPopup(); updateUI(); }, 700);
                 }
                 return;
             }
 
-            const saveRef = doc(db, 'artifacts', appId, 'public', 'data', 'saves', usernameInput);
+            // Path updated to saves_v2 for global wipe enforcement
+            const saveRef = doc(db, 'artifacts', appId, 'public', 'data', 'saves_v2', usernameInput);
             if (action === 'go') {
                 errEl.innerText = "AUTHENTICATING...";
                 const docSnap = await getDoc(saveRef);
@@ -1113,27 +1115,28 @@
                     if (rememberMe) { localStorage.setItem('neonUsername', currentUsername); localStorage.setItem('neonPassword', currentPassword); } 
                     else { localStorage.removeItem('neonUsername'); localStorage.removeItem('neonPassword'); }
                     
-                    saveData = data.saveData || { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0, healthRegen: 0, barricadeRegen: 0}, leaderboard: [], tutorialCompleted: false };
+                    saveData = data.saveData || { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0, healthRegen: 0, barricadeRegen: 0}, leaderboard: [], tutorialCompleted: false, seenUpdateLogV1: false };
                     if(!saveData.upgrades) saveData.upgrades = {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0, healthRegen: 0, barricadeRegen: 0};
                     if(!saveData.leaderboard) saveData.leaderboard = [];
+                    if(saveData.seenUpdateLogV1 === undefined) saveData.seenUpdateLogV1 = false;
                     currentActiveBarricades = saveData.barricadeTotal;
                     localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
                     
                     errEl.className = "text-xs text-green-400 font-bold h-4"; errEl.innerText = `WELCOME BACK, ${currentUsername}!`;
-                    setTimeout(() => { authModal.classList.add('hidden'); signOutBtn.classList.remove('hidden'); menu.classList.remove('hidden'); updateUI(); }, 700);
+                    setTimeout(() => { authModal.classList.add('hidden'); signOutBtn.classList.remove('hidden'); checkUpdateLogPopup(); updateUI(); }, 700);
                 } else {
                     errEl.innerText = "CREATING SECURE PROFILE...";
                     currentUsername = usernameInput; currentPassword = passwordInput;
                     if (rememberMe) { localStorage.setItem('neonUsername', currentUsername); localStorage.setItem('neonPassword', currentPassword); } 
                     else { localStorage.removeItem('neonUsername'); localStorage.removeItem('neonPassword'); }
                     
-                    saveData = { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0, healthRegen: 0, barricadeRegen: 0}, leaderboard: [], tutorialCompleted: false };
+                    saveData = { currentWave: 1, flux: 0, barricadeTotal: 0, upgrades: {width: 1, speed: 1, multi: 1, health: 0, emp: 0, empCooldown: 0, healthRegen: 0, barricadeRegen: 0}, leaderboard: [], tutorialCompleted: false, seenUpdateLogV1: false };
                     currentActiveBarricades = saveData.barricadeTotal;
                     await setDoc(saveRef, { password: currentPassword, saveData: saveData });
                     localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
                     
                     errEl.className = "text-xs text-cyan-400 font-bold h-4"; errEl.innerText = `NEW SECURE PROFILE CREATED!`;
-                    setTimeout(() => { authModal.classList.add('hidden'); signOutBtn.classList.remove('hidden'); menu.classList.remove('hidden'); updateUI(); }, 700);
+                    setTimeout(() => { authModal.classList.add('hidden'); signOutBtn.classList.remove('hidden'); checkUpdateLogPopup(); updateUI(); }, 700);
                 }
             }
         } catch (e) {
@@ -1487,7 +1490,8 @@
             renderData(scores);
         } else {
             list.innerHTML = '<div class="text-gray-500 italic text-center mt-10 font-bold animate-pulse">Syncing Network...</div>';
-            const lbCollection = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard_v5');
+            // Collection shifted to leaderboard_v6 to sync with true global wipe
+            const lbCollection = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard_v6');
             leaderboardUnsubscribe = onSnapshot(lbCollection, (snapshot) => {
                 let scores = [];
                 snapshot.forEach(doc => { scores.push(doc.data()); });
@@ -1533,7 +1537,7 @@
         }
 
         try {
-            const lbRef = doc(db, 'artifacts', appId, 'public', 'data', 'leaderboard_v5', safePlayerName);
+            const lbRef = doc(db, 'artifacts', appId, 'public', 'data', 'leaderboard_v6', safePlayerName);
             await setDoc(lbRef, payload, { merge: true });
             statusEl.innerText = "STATS SYNCED TO NETWORK!"; statusEl.className = "text-xs text-green-400 font-bold h-4 mb-4";
         } catch (e) { statusEl.innerText = "NETWORK SYNC FAILED"; statusEl.className = "text-xs text-red-500 font-bold h-4 mb-4"; }
@@ -1563,6 +1567,25 @@
         }
         updateUI();
     }
+
+    window.closeRoadmap = () => {
+        if (!saveData.seenUpdateLogV1) {
+            saveData.seenUpdateLogV1 = true;
+            saveGame();
+        }
+        toggleModal('roadmap-modal', false);
+    };
+
+    window.checkUpdateLogPopup = () => {
+        if (!saveData.seenUpdateLogV1) {
+            document.getElementById('btn-ack-roadmap').classList.remove('hidden');
+            toggleModal('roadmap-modal', true);
+        } else {
+            const ackBtn = document.getElementById('btn-ack-roadmap');
+            if(ackBtn) ackBtn.classList.add('hidden');
+            toggleModal('menu', true);
+        }
+    };
 
     window.handleStartClick = () => {
         if (!saveData.tutorialCompleted && saveData.currentWave === 1) {

@@ -495,7 +495,7 @@
 
             <!-- Threat Index Menu -->
             <div id="index-modal" class="hidden">
-                <button class="btn-exit !text-[#ff0055]" style="text-shadow: 0 0 25px #ff0055;" onclick="toggleModal('index-modal', false)">×</button>
+                <button type="button" class="btn-exit !text-[#ff0055]" style="text-shadow: 0 0 25px #ff0055;" onclick="toggleModal('index-modal', false)">×</button>
                 <div class="border-b-2 border-white/10 pb-4 mt-8 text-left">
                     <h1 class="modal-title !text-[#ff0055]" style="text-shadow: 0 0 15px #ff0055;">THREAT INDEX</h1>
                     <p class="text-gray-500 text-sm font-bold uppercase tracking-widest">Classified Enemy Intelligence</p>
@@ -554,7 +554,7 @@
 
             <!-- Roadmap & Update Log Menu -->
             <div id="roadmap-modal" class="hidden !border-emerald-500 !shadow-[0_0_100px_rgba(16,185,129,0.15)]" onclick="if(event.target === this) closeRoadmap()">
-                <button class="btn-exit !text-emerald-500" style="text-shadow: 0 0 25px #10b981;" onclick="closeRoadmap()">×</button>
+                <button type="button" class="btn-exit !text-emerald-500" style="text-shadow: 0 0 25px #10b981;" onclick="closeRoadmap()">×</button>
                 <div class="border-b-2 border-white/10 pb-4 mt-8 text-left flex-shrink-0">
                     <h1 class="modal-title !text-emerald-500" style="text-shadow: 0 0 15px #10b981;">PROJECT ROADMAP</h1>
                     <p class="text-gray-500 text-sm font-bold uppercase tracking-widest">Update Log & Threat Intelligence</p>
@@ -637,7 +637,7 @@
                         </div>
                     </div>
                     
-                    <button id="btn-ack-roadmap" class="btn mt-4 !bg-emerald-500 !text-black hidden" onclick="closeRoadmap()">ACKNOWLEDGE & CONTINUE</button>
+                    <button type="button" id="btn-ack-roadmap" class="btn mt-4 !bg-emerald-500 !text-black hidden" onclick="closeRoadmap()">ACKNOWLEDGE & CONTINUE</button>
                 </div>
             </div>
 
@@ -1395,7 +1395,7 @@
         if (buyBBtn) {
             const barricadeCost = 5 + (saveData.barricadeTotal * 5);
             if (saveData.barricadeTotal >= 10) { 
-                buyBBtn.disabled = false; 
+                buyBBtn.disabled = true; 
                 buyBBtn.innerText = "MAX"; 
             } else { 
                 buyBBtn.disabled = false; 
@@ -1570,24 +1570,36 @@
         updateUI();
     }
 
-    window.closeRoadmap = () => {
-        if (!saveData.seenUpdateLogV1) {
-            saveData.seenUpdateLogV1 = true;
-            saveGame();
+    function closeRoadmap() {
+        try {
+            if (!saveData.seenUpdateLogV1) {
+                saveData.seenUpdateLogV1 = true;
+                saveGame();
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            toggleModal('roadmap-modal', false);
         }
-        toggleModal('roadmap-modal', false);
-    };
+    }
+    window.closeRoadmap = closeRoadmap;
 
-    window.checkUpdateLogPopup = () => {
-        if (!saveData.seenUpdateLogV1) {
-            document.getElementById('btn-ack-roadmap').classList.remove('hidden');
-            toggleModal('roadmap-modal', true);
-        } else {
-            const ackBtn = document.getElementById('btn-ack-roadmap');
-            if(ackBtn) ackBtn.classList.add('hidden');
+    function checkUpdateLogPopup() {
+        try {
+            if (!saveData.seenUpdateLogV1) {
+                document.getElementById('btn-ack-roadmap').classList.remove('hidden');
+                toggleModal('roadmap-modal', true);
+            } else {
+                const ackBtn = document.getElementById('btn-ack-roadmap');
+                if(ackBtn) ackBtn.classList.add('hidden');
+                toggleModal('menu', true);
+            }
+        } catch (e) {
+            console.error(e);
             toggleModal('menu', true);
         }
-    };
+    }
+    window.checkUpdateLogPopup = checkUpdateLogPopup;
 
     window.handleStartClick = () => {
         if (!saveData.tutorialCompleted && saveData.currentWave === 1) {
@@ -2072,6 +2084,7 @@
         for(let i = 0; i < currentHealth; i++) { ctx.beginPath(); ctx.arc(centerX, centerY, 20 + (i * 3), 0, Math.PI * 2); ctx.stroke(); } ctx.shadowBlur = 0;
     }
 
+    // Draw wood-coloured blockades for the Barricades
     function drawBarricades() {
         barricadeUnits.forEach(b => {
             const bx = centerX + Math.cos(b.angle) * b.dist; const by = centerY + Math.sin(b.angle) * b.dist;
@@ -2137,10 +2150,11 @@
             if (enemiesToAdd.length > 0) enemies.push(...enemiesToAdd);
             bosses = bosses.filter(b => b.update());
             
-            if (gameActive) {
-                if (isBossWave && bosses.length === 0) { enemies = []; onWaveClear(); } 
-                else if (!isBossWave && enemiesDestroyedInWave >= totalEnemiesToDestroy && enemies.length === 0) { onWaveClear(); }
-            }
+            // Critical Fix: Prevent wave clear from triggering if the player just died
+            if (!gameActive) return;
+            
+            if (isBossWave && bosses.length === 0) { enemies = []; onWaveClear(); } 
+            else if (!isBossWave && enemiesDestroyedInWave >= totalEnemiesToDestroy && enemies.length === 0) { onWaveClear(); }
         }
         
         if (!isPaused) { particles = particles.filter(p => p.update()); floatingTexts = floatingTexts.filter(ft => ft.update()); }
@@ -2153,7 +2167,6 @@
     }
     
     window.togglePause = () => togglePause();
-    window.quitToMenu = () => quitToMenu();
     window.startGame = (heal) => startGame(heal);
     window.toggleModal = (id, show) => toggleModal(id, show);
     window.buyUpgrade = (type) => buyUpgrade(type);
@@ -2164,11 +2177,6 @@
     window.renderLeaderboardUI = (t) => renderLeaderboardUI(t);
     window.endGame = () => endGame();
     window.triggerEMP = () => triggerEMP();
-    window.closeRoadmap = () => closeRoadmap();
-    window.handleStartClick = () => handleStartClick();
-    window.completeTutorial = () => completeTutorial();
-    window.skipTutorial = () => skipTutorial();
-    window.setTestWave = (w) => setTestWave(w);
     
     const setupDragScroll = (selector, isVertical) => {
         document.querySelectorAll(selector).forEach(el => {

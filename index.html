@@ -564,18 +564,14 @@
                     <!-- Update Log -->
                     <div class="bg-white/5 p-5 rounded-xl border border-emerald-500/30">
                         <h2 class="font-black text-emerald-400 text-xl mb-3 border-b border-emerald-500/30 pb-2">UPDATE LOG</h2>
-                        <h3 class="font-bold text-white text-sm mb-2">Recent Deployments:</h3>
-                        <ul class="list-disc pl-5 text-gray-300 text-xs space-y-1.5 leading-relaxed">
-                            <li><strong>Data Archive & Roadmap Terminals:</strong> Integrated in-game UI modules providing decrypted intelligence on Google AI Studio and pending expansion blueprints.</li>
-                            <li><strong>Boss AI Overhaul:</strong> Fixed a critical bug where generic enemies spawned instead of intended boss projectiles (Stingers/Bouncers).</li>
-                            <li><strong>The Swarm Queen (Wave 20):</strong> Officially deployed the first bespoke boss variant, featuring erratic movement and rapid Stinger generation.</li>
-                            <li><strong>Boss Balancing:</strong> Reduced the starting Wave 10 boss health by 50% to ensure a smoother difficulty curve for early runs.</li>
-                            <li><strong>Splitter Rework:</strong> Fixed Splitter mechanics. They now shatter instantly upon impact to release their 3 fragments, rather than rebounding and surviving.</li>
-                            <li><strong>Threat Index:</strong> Added a comprehensive enemy encyclopaedia. Corrected UI bugs (removed black boxes, fixed Splitter hexagonal icon) and implemented dynamic unlocking—enemies only appear in the index once encountered in-game.</li>
-                            <li><strong>New Player Experience:</strong> Added a start-up Tutorial with a permanent skip option.</li>
-                            <li><strong>Leaderboard Polish:</strong> Fixed the overflow bug so kill counts properly cap (e.g., 50/50 instead of 51/50). Removed redundant tabs (Perfect Wave, Wall of Steel, Efficiency) to streamline the interface.</li>
-                            <li><strong>UI Updates:</strong> Standardised the "MAX" button colour in the Barricade shop to seamlessly match the other maxed upgrades.</li>
-                            <li><strong>Global Reset & Test Infrastructure:</strong> Created and subsequently disabled developer test tools (/testmode, wave selection). Wiped all player data and migrated to a fresh competitive database (Leaderboard v5).</li>
+                        <ul class="list-disc pl-5 text-gray-300 text-xs space-y-2 leading-relaxed">
+                            <li><strong>New Boss:</strong> Added "The Swarm Queen" to Wave 20!</li>
+                            <li><strong>Boss Balancing:</strong> Wave 10 Boss health reduced by 50% for a smoother difficulty curve.</li>
+                            <li><strong>Enemy Fixes:</strong> Splitters now shatter instantly upon impact instead of surviving.</li>
+                            <li><strong>Threat Index:</strong> Added an encyclopaedia that unlocks as you encounter new enemies.</li>
+                            <li><strong>Tutorial Added:</strong> New players now get a quick breakdown of how to play.</li>
+                            <li><strong>Leaderboard Polish:</strong> Cleaned up the tabs and fixed kill-count display bugs.</li>
+                            <li><strong>Global Reset:</strong> Wiped all old test data for a fresh competitive leaderboard start!</li>
                         </ul>
                     </div>
 
@@ -1570,36 +1566,24 @@
         updateUI();
     }
 
-    function closeRoadmap() {
-        try {
-            if (!saveData.seenUpdateLogV1) {
-                saveData.seenUpdateLogV1 = true;
-                saveGame();
-            }
-        } catch (e) {
-            console.error(e);
-        } finally {
-            toggleModal('roadmap-modal', false);
+    window.closeRoadmap = () => {
+        if (!saveData.seenUpdateLogV1) {
+            saveData.seenUpdateLogV1 = true;
+            saveGame();
         }
-    }
-    window.closeRoadmap = closeRoadmap;
+        toggleModal('roadmap-modal', false);
+    };
 
-    function checkUpdateLogPopup() {
-        try {
-            if (!saveData.seenUpdateLogV1) {
-                document.getElementById('btn-ack-roadmap').classList.remove('hidden');
-                toggleModal('roadmap-modal', true);
-            } else {
-                const ackBtn = document.getElementById('btn-ack-roadmap');
-                if(ackBtn) ackBtn.classList.add('hidden');
-                toggleModal('menu', true);
-            }
-        } catch (e) {
-            console.error(e);
+    window.checkUpdateLogPopup = () => {
+        if (!saveData.seenUpdateLogV1) {
+            document.getElementById('btn-ack-roadmap').classList.remove('hidden');
+            toggleModal('roadmap-modal', true);
+        } else {
+            const ackBtn = document.getElementById('btn-ack-roadmap');
+            if(ackBtn) ackBtn.classList.add('hidden');
             toggleModal('menu', true);
         }
-    }
-    window.checkUpdateLogPopup = checkUpdateLogPopup;
+    };
 
     window.handleStartClick = () => {
         if (!saveData.tutorialCompleted && saveData.currentWave === 1) {
@@ -2150,9 +2134,6 @@
             if (enemiesToAdd.length > 0) enemies.push(...enemiesToAdd);
             bosses = bosses.filter(b => b.update());
             
-            // Critical Fix: Prevent wave clear from triggering if the player just died
-            if (!gameActive) return;
-            
             if (isBossWave && bosses.length === 0) { enemies = []; onWaveClear(); } 
             else if (!isBossWave && enemiesDestroyedInWave >= totalEnemiesToDestroy && enemies.length === 0) { onWaveClear(); }
         }
@@ -2163,10 +2144,12 @@
         particles.forEach(p => p.draw()); floatingTexts.forEach(ft => ft.draw()); drawShields();
         
         if (shakeAmount > 0.1) ctx.restore(); else shakeAmount = 0;
+        
         requestAnimationFrame(loop);
     }
     
     window.togglePause = () => togglePause();
+    window.quitToMenu = () => quitToMenu();
     window.startGame = (heal) => startGame(heal);
     window.toggleModal = (id, show) => toggleModal(id, show);
     window.buyUpgrade = (type) => buyUpgrade(type);
@@ -2177,6 +2160,53 @@
     window.renderLeaderboardUI = (t) => renderLeaderboardUI(t);
     window.endGame = () => endGame();
     window.triggerEMP = () => triggerEMP();
+    window.closeRoadmap = () => {
+        if (!saveData.seenUpdateLogV1) {
+            saveData.seenUpdateLogV1 = true;
+            saveGame();
+        }
+        toggleModal('roadmap-modal', false);
+    };
+
+    window.checkUpdateLogPopup = () => {
+        if (!saveData.seenUpdateLogV1) {
+            document.getElementById('btn-ack-roadmap').classList.remove('hidden');
+            toggleModal('roadmap-modal', true);
+        } else {
+            const ackBtn = document.getElementById('btn-ack-roadmap');
+            if(ackBtn) ackBtn.classList.add('hidden');
+            toggleModal('menu', true);
+        }
+    };
+
+    window.handleStartClick = () => {
+        if (!saveData.tutorialCompleted && saveData.currentWave === 1) {
+            toggleModal('tutorial-modal', true);
+        } else {
+            startGame(true);
+        }
+    };
+    
+    window.completeTutorial = () => {
+        saveData.tutorialCompleted = true;
+        saveGame();
+        startGame(true);
+    };
+
+    window.skipTutorial = () => {
+        saveData.tutorialCompleted = true;
+        saveGame();
+        startGame(true);
+    };
+
+    window.setTestWave = (val) => {
+        if (!TEST_MODE) return;
+        let wave = parseInt(val);
+        if (isNaN(wave) || wave < 1) wave = 1;
+        saveData.currentWave = wave;
+        saveData.highestWaveReached = Math.max(saveData.highestWaveReached || 1, wave);
+        saveGame();
+    };
     
     const setupDragScroll = (selector, isVertical) => {
         document.querySelectorAll(selector).forEach(el => {

@@ -48,6 +48,7 @@
             align-items: flex-start;
             width: 100%;
         }
+        
         #wave-container {
             position: absolute;
             top: 20px;
@@ -90,6 +91,7 @@
             color: #fbbf24;
             font-weight: bold;
         }
+        
         #health-bar {
             display: flex;
             gap: 4px;
@@ -1416,11 +1418,11 @@
         localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData)); updateUI();
         if (currentUsername) {
             if (isOfflineMode) {
-                let localProfiles = JSON.parse(localStorage.getItem('neon_emulated_profiles') || '{}');
-                if (localProfiles[currentUsername]) { localProfiles[currentUsername].saveData = saveData; localStorage.setItem('neon_emulated_profiles', JSON.stringify(localProfiles)); }
+                let localProfiles = JSON.parse(localStorage.getItem('neon_emulated_profiles_v2') || '{}');
+                if (localProfiles[currentUsername]) { localProfiles[currentUsername].saveData = saveData; localStorage.setItem('neon_emulated_profiles_v2', JSON.stringify(localProfiles)); }
             } else if (currentPassword) {
                 if (!authReady || !auth.currentUser) return; 
-                try { const saveRef = doc(db, 'artifacts', appId, 'public', 'data', 'saves', currentUsername); await setDoc(saveRef, { password: currentPassword, saveData: saveData }); } 
+                try { const saveRef = doc(db, 'artifacts', appId, 'public', 'data', 'saves_v2', currentUsername); await setDoc(saveRef, { password: currentPassword, saveData: saveData }); } 
                 catch (e) { console.error("Cloud sync failed", e); }
             }
         }
@@ -1957,7 +1959,7 @@
                 this.color = this.isPhased ? 'rgba(160, 32, 240, 0.25)' : '#a020f0';
             }
 
-            if (this.type === 'bouncer' && this.state === 'rebounding') {
+            if ((this.type === 'bouncer' || this.type === 'splitter') && this.state === 'rebounding') {
                 const maxScreenDist = Math.min(width, height) * 0.48; 
                 if (dist < maxScreenDist) { this.x -= (dx / dist) * this.speed * 2.5; this.y -= (dy / dist) * this.speed * 2.5; }
                 this.reboundTicks--; if (this.reboundTicks <= 0) { this.state = 'attacking'; this.isImmortal = false; }
@@ -2135,11 +2137,10 @@
             if (enemiesToAdd.length > 0) enemies.push(...enemiesToAdd);
             bosses = bosses.filter(b => b.update());
             
-            // Critical Fix: Prevent wave clear from triggering if the player just died
-            if (!gameActive) return;
-            
-            if (isBossWave && bosses.length === 0) { enemies = []; onWaveClear(); } 
-            else if (!isBossWave && enemiesDestroyedInWave >= totalEnemiesToDestroy && enemies.length === 0) { onWaveClear(); }
+            if (gameActive) {
+                if (isBossWave && bosses.length === 0) { enemies = []; onWaveClear(); } 
+                else if (!isBossWave && enemiesDestroyedInWave >= totalEnemiesToDestroy && enemies.length === 0) { onWaveClear(); }
+            }
         }
         
         if (!isPaused) { particles = particles.filter(p => p.update()); floatingTexts = floatingTexts.filter(ft => ft.update()); }
@@ -2152,6 +2153,7 @@
     }
     
     window.togglePause = () => togglePause();
+    window.quitToMenu = () => quitToMenu();
     window.startGame = (heal) => startGame(heal);
     window.toggleModal = (id, show) => toggleModal(id, show);
     window.buyUpgrade = (type) => buyUpgrade(type);
@@ -2162,6 +2164,11 @@
     window.renderLeaderboardUI = (t) => renderLeaderboardUI(t);
     window.endGame = () => endGame();
     window.triggerEMP = () => triggerEMP();
+    window.closeRoadmap = () => closeRoadmap();
+    window.handleStartClick = () => handleStartClick();
+    window.completeTutorial = () => completeTutorial();
+    window.skipTutorial = () => skipTutorial();
+    window.setTestWave = (w) => setTestWave(w);
     
     const setupDragScroll = (selector, isVertical) => {
         document.querySelectorAll(selector).forEach(el => {

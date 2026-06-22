@@ -2945,7 +2945,7 @@
         leaderboard: [],
         lifetimeFlux: 0,
         playtime: 0,
-        bossesDefeated: 0,
+        bossesDefeated: [],
         maxPerfectWave: 0,
         barricadesBuilt: 0,
         fastestWaveTime: 9999,
@@ -3193,96 +3193,112 @@
           default: {
             id: "default",
             name: "Standard Threats",
+            color: "none",
             aura: "none",
             rarity: "Common",
           },
           inferno: {
             id: "inferno",
             name: "Inferno Aura",
+            color: "#ff4500",
             aura: "#ff4500",
             rarity: "Common",
           },
           frost: {
             id: "frost",
             name: "Frostbite Aura",
+            color: "#00ffff",
             aura: "#00ffff",
             rarity: "Rare",
           },
           toxic: {
             id: "toxic",
             name: "Toxic Trail",
+            color: "#32cd32",
             aura: "#32cd32",
             rarity: "Epic",
           },
           royal: {
             id: "royal",
             name: "Royal Guard",
+            color: "#fbbf24",
             aura: "#fbbf24",
             rarity: "Legendary",
           },
           phantom: {
             id: "phantom",
             name: "Phantom Echo",
+            color: "#8a2be2",
             aura: "#8a2be2",
             rarity: "Mythic",
           },
           kiwi: {
             id: "kiwi",
             name: "Kiwi Swarm",
+            color: "#8ee53f",
             aura: "#8ee53f",
             rarity: "Common",
           },
           worm: {
             id: "worm",
             name: "Worm Minions",
+            color: "#ffb6c1",
             aura: "#ffb6c1",
             rarity: "Common",
           },
           static: {
             id: "static",
             name: "Static Noise",
+            color: "#888",
             aura: "#888",
             rarity: "Uncommon",
           },
           mud: {
             id: "mud",
             name: "Mud Splatter",
+            color: "#70543e",
             aura: "#70543e",
             rarity: "Uncommon",
           },
           electric: {
             id: "electric",
             name: "High Voltage",
+            color: "#ffff00",
             aura: "#ffff00",
             rarity: "Rare",
           },
           cherry: {
             id: "cherry",
             name: "Cherry Blossom",
+            color: "#ffb7c5",
             aura: "#ffb7c5",
             rarity: "Rare",
           },
           spectral: {
             id: "spectral",
             name: "Spectral",
+            color: "#add8e6",
             aura: "#add8e6",
             rarity: "Epic",
           },
           vampire: {
             id: "vampire",
             name: "Vampiric",
+            color: "#800000",
             aura: "#800000",
             rarity: "Epic",
           },
           golden: {
             id: "golden",
             name: "Golden Horde",
+            color: "#ffd700",
             aura: "#ffd700",
             rarity: "Legendary",
           },
           celestial: {
             id: "celestial",
             name: "Celestial Beings",
+            color: "#fff",
             aura: "#fff",
             rarity: "Mythic",
           },
@@ -3833,6 +3849,17 @@
       ];
 
       function initializeSkinsData() {
+        if (typeof saveData.bossesDefeated === "number") {
+          const num = saveData.bossesDefeated;
+          saveData.bossesDefeated = [];
+          for (let i = 1; i <= num; i++) {
+            if (i <= 10) saveData.bossesDefeated.push(i * 10);
+          }
+        }
+        if (!saveData.bossesDefeated || !Array.isArray(saveData.bossesDefeated)) {
+          saveData.bossesDefeated = [];
+        }
+
         if (!saveData.migratedToV29) {
           saveData.currentWave = 1;
           saveData.highestWaveReached = 1;
@@ -4197,7 +4224,7 @@
             leaderboard: [],
             lifetimeFlux: 0,
             playtime: 0,
-            bossesDefeated: 0,
+            bossesDefeated: [],
             maxPerfectWave: 0,
             barricadesBuilt: 0,
             fastestWaveTime: 9999,
@@ -4565,7 +4592,7 @@
           leaderboard: [],
           lifetimeFlux: 0,
           playtime: 0,
-          bossesDefeated: 0,
+          bossesDefeated: [],
           maxPerfectWave: 0,
           barricadesBuilt: 0,
           fastestWaveTime: 9999,
@@ -5826,13 +5853,17 @@ default: return ``;
         const categoryLabel =
           item.c === "core"
             ? "Core Skin"
-            : (item.c === "shield" || item.c === "shield2" || item.c === "shield3")
-              ? "Shield Skin"
-              : item.c === "lives"
-                ? "Lives Rings Skin"
-                : item.c === "worldcup"
-                  ? "World Cup Theme"
-                  : "Enemy Theme";
+            : item.c === "shield"
+              ? "Shield Skin 1"
+              : item.c === "shield2"
+                ? "Shield Skin 2"
+                : item.c === "shield3"
+                  ? "Shield Skin 3"
+                  : item.c === "lives"
+                    ? "Lives Rings Skin"
+                    : item.c === "worldcup"
+                      ? "World Cup Theme"
+                      : "Enemy Theme";
         if (!saveData.unlockedSkins) initializeSkinsData();
         if (saveData.unlockedSkins[item.c].includes(item.id)) {
           const refund = Math.ceil(crateCost / 2);
@@ -5955,8 +5986,7 @@ default: return ``;
           Object.keys(SKINS.core || {}).length +
           Object.keys(SKINS.shield || {}).length * 3 +
           Object.keys(SKINS.enemies || {}).length +
-          Object.keys(SKINS.lives || {}).length +
-          Object.keys(SKINS.worldcup || {}).length
+          Object.keys(SKINS.lives || {}).length
         );
       }
 
@@ -6145,7 +6175,7 @@ default: return ``;
         }
         let cosmeticsCount = 0;
         if (saveData.unlockedSkins) {
-          ["core", "shield", "shield2", "shield3", "enemies", "lives", "worldcup"].forEach((cat) => {
+          ["core", "shield", "shield2", "shield3", "enemies", "lives"].forEach((cat) => {
             if (saveData.unlockedSkins[cat])
               cosmeticsCount += saveData.unlockedSkins[cat].length;
           });
@@ -6159,7 +6189,7 @@ default: return ``;
           lifetimeFlux: saveData.lifetimeFlux || 0,
           currentFlux: saveData.flux || 0,
           playtime: saveData.playtime || 0,
-          bossesDefeated: saveData.bossesDefeated || 0,
+          bossesDefeated: Array.isArray(saveData.bossesDefeated) ? saveData.bossesDefeated.length : (saveData.bossesDefeated || 0),
           cratesUnboxed: saveData.cratesUnboxed || 0,
           ticketsWon: saveData.ticketsWon || 0,
           ticketsLost: saveData.ticketsLost || 0,
@@ -6618,6 +6648,7 @@ default: return ``;
           } else {
             this.color = "#ff0055"; this.speed = 3.0 * difficulty; this.size = 12; this.hp = 1;
           }
+          this.colorVariant = Math.floor(Math.random() * 2);
         }
 
         getPoints() {
@@ -6983,7 +7014,7 @@ default: return ``;
           }
 
           // Shield Collision
-          if (!this.isImmortal && !this.isPhased && this.type !== "fakeflux") {
+          if (!this.isImmortal && !this.isPhased && this.type !== "fakeflux" && timeSinceLastAction < 17.5) {
             const currentAngle = Math.atan2(this.y - centerY, this.x - centerX);
             const normalizedEnemyAngle = ((currentAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
             const arcWidth = 0.7 + (saveData.upgrades.width - 1) * 0.15;
@@ -7054,7 +7085,7 @@ default: return ``;
           }
 
           // Fake Flux Collision with Shield
-          if (this.type === "fakeflux" && dist < SHIELD_RADIUS + 15 && dist > SHIELD_RADIUS - 15) {
+          if (this.type === "fakeflux" && timeSinceLastAction < 17.5 && dist < SHIELD_RADIUS + 15 && dist > SHIELD_RADIUS - 15) {
              const currentAngle = Math.atan2(this.y - centerY, this.x - centerX);
              const normalizedEnemyAngle = ((currentAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
              const arcWidth = 0.7 + (saveData.upgrades.width - 1) * 0.15;
@@ -7168,6 +7199,27 @@ default: return ``;
           let auraColor = "none";
           if (saveData.equippedSkins && saveData.equippedSkins.enemies) {
             auraColor = SKINS.enemies[saveData.equippedSkins.enemies].aura;
+          }
+
+          // Apply actual enemy color from skins (skip special types)
+          if (!this.isWhiteMinion && this.type !== "fakeflux") {
+            if (
+              saveData.equippedSkins &&
+              saveData.equippedSkins.worldcup &&
+              saveData.equippedSkins.worldcup !== "none" &&
+              SKINS.worldcup[saveData.equippedSkins.worldcup]
+            ) {
+              const wcSkin = SKINS.worldcup[saveData.equippedSkins.worldcup];
+              this.color = this.colorVariant === 0 ? wcSkin.core : wcSkin.shield;
+            } else if (
+              saveData.equippedSkins &&
+              saveData.equippedSkins.enemies &&
+              saveData.equippedSkins.enemies !== "default" &&
+              SKINS.enemies[saveData.equippedSkins.enemies] &&
+              SKINS.enemies[saveData.equippedSkins.enemies].color !== "none"
+            ) {
+              this.color = SKINS.enemies[saveData.equippedSkins.enemies].color;
+            }
           }
 
           if (this.type !== "normal" && this.type !== "splitter" && this.type !== "juggernaut" && this.type !== "glitch") {
@@ -7419,6 +7471,7 @@ default: return ``;
         }
         
         checkShieldCollision(dist, hitRange = 15) {
+          if (timeSinceLastAction >= 17.5) return false;
           if (this.invulnTimer === undefined) this.invulnTimer = 0;
           if (this.invulnTimer > 0) {
             this.invulnTimer -= timeScale;
@@ -7696,7 +7749,7 @@ class TheBoss extends ColossalBoss {
              }
              
              // Stun player if hits shield during bounce
-             if (this.bounceCooldown <= 0 && dist < SHIELD_RADIUS + this.size && dist > SHIELD_RADIUS - this.size - 10) {
+             if (this.bounceCooldown <= 0 && timeSinceLastAction < 17.5 && dist < SHIELD_RADIUS + this.size && dist > SHIELD_RADIUS - this.size - 10) {
                 rotationDir *= -1; // stun/reverse rotation
                 const pushAngle = Math.atan2(this.y - centerY, this.x - centerX);
                 this.x = centerX + Math.cos(pushAngle) * (SHIELD_RADIUS + this.size + 15);
@@ -7725,7 +7778,7 @@ class TheBoss extends ColossalBoss {
                    this.y += dyNorm * (dashSpeed / steps);
                    let sdx = centerX - this.x; let sdy = centerY - this.y;
                    let sdist = Math.hypot(sdx, sdy);
-                   if (sdist < SHIELD_RADIUS + this.size + 10 && sdist > SHIELD_RADIUS - this.size - 10) {
+                   if (timeSinceLastAction < 17.5 && sdist < SHIELD_RADIUS + this.size + 10 && sdist > SHIELD_RADIUS - this.size - 10) {
                       break;
                    }
                 }
@@ -8248,7 +8301,7 @@ class TheBoss extends ColossalBoss {
            if (this.hp <= 0) return false;
            let dx = centerX - this.x; let dy = centerY - this.y;
            let dist = Math.hypot(dx, dy);
-           if (dist < SHIELD_RADIUS + this.size && dist > SHIELD_RADIUS - 10) {
+           if (timeSinceLastAction < 17.5 && dist < SHIELD_RADIUS + this.size && dist > SHIELD_RADIUS - 10) {
               let hitDiff = Math.abs(Math.atan2(dy, dx) - (rotation % (Math.PI*2)));
               if (hitDiff > Math.PI) hitDiff = Math.PI*2 - hitDiff;
               if (hitDiff < ((Math.PI * 2) / saveData.upgrades.multi)/2) {
@@ -8321,7 +8374,8 @@ class TheBoss extends ColossalBoss {
           ctx.save(); ctx.translate(this.x, this.y);
           ctx.shadowBlur = 20; ctx.shadowColor = this.color;
           ctx.fillStyle = "#000"; ctx.beginPath(); ctx.arc(0, 0, this.size, 0, Math.PI*2); ctx.fill();
-          ctx.strokeStyle = this.color; ctx.lineWidth = 3; ctx.stroke();
+          ctx.strokeStyle = this.color; ctx.lineWidth = 3;
+          ctx.stroke();
           
           // accretion disk
           ctx.rotate(Date.now() / 200);
@@ -8355,7 +8409,7 @@ class TheBoss extends ColossalBoss {
              let dx = centerX - this.x; let dy = centerY - this.y;
              let dist = Math.hypot(dx, dy);
              
-             if (dist < SHIELD_RADIUS + this.size && dist > SHIELD_RADIUS - 10) {
+             if (timeSinceLastAction < 17.5 && dist < SHIELD_RADIUS + this.size && dist > SHIELD_RADIUS - 10) {
                 let currentAng = Math.atan2(dy, dx);
                 let hitDiff = Math.abs(currentAng - (rotation % (Math.PI*2)));
                 if (hitDiff > Math.PI) hitDiff = Math.PI*2 - hitDiff;
@@ -8461,7 +8515,7 @@ class TheBoss extends ColossalBoss {
                    this.y += dyNorm * (dashSpeed / steps);
                    let sdx = centerX - this.x; let sdy = centerY - this.y;
                    let sdist = Math.hypot(sdx, sdy);
-                   if (sdist < SHIELD_RADIUS + this.size + 15 && sdist > SHIELD_RADIUS - this.size - 15) {
+                   if (timeSinceLastAction < 17.5 && sdist < SHIELD_RADIUS + this.size + 15 && sdist > SHIELD_RADIUS - this.size - 15) {
                       break;
                    }
                 }
@@ -9600,7 +9654,7 @@ class TheBoss extends ColossalBoss {
 
         if (gameActive && !isPaused) {
           timeSinceLastAction += dt / 1000;
-          if (timeSinceLastAction >= 13) {
+          if (timeSinceLastAction >= 17.5) {
             shieldAlpha = Math.max(0.25, shieldAlpha - (dt / 1000) * 0.25);
           } else {
             shieldAlpha = Math.min(1.0, shieldAlpha + (dt / 1000) * 4.0);

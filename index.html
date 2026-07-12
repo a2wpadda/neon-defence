@@ -3216,13 +3216,7 @@
         isOfflineMode = true;
       }
 
-      if (isOfflineMode) {
-        localStorage.removeItem("neon_emulated_leaderboard_v2");
-        localStorage.removeItem("neon_emulated_profiles_v5");
-        localStorage.removeItem("neonDefenceDataV28_Live");
-        localStorage.removeItem("neonUsername");
-        localStorage.removeItem("neonPassword");
-      }
+      // Local storage variables are persisted correctly for offline mode saves.
 
       window.devResetFirestoreLeaderboard = async () => {
         if (isOfflineMode) {
@@ -4861,6 +4855,8 @@
         });
       }
 
+
+
       async function handleAuth(action) {
         initAudio();
         const rawUsernameInput = document
@@ -5104,7 +5100,7 @@
             appId,
             "public",
             "data",
-            "saves_v5",
+            "saves_v4",
             usernameInput,
           );
           if (action === "go") {
@@ -5235,7 +5231,7 @@
         } catch (e) {
           console.error(e);
           errEl.className = "text-xs text-red-500 font-bold h-4";
-          errEl.innerText = e.message.replace("Firebase: ", "");
+          errEl.innerText = (e.message || String(e)).replace("Firebase: ", "");
         }
       }
       async function handleSignOut() {
@@ -6327,7 +6323,7 @@
                 appId,
                 "public",
                 "data",
-                "saves_v5",
+                "saves_v4",
                 currentUsername,
               );
               await setDoc(saveRef, {
